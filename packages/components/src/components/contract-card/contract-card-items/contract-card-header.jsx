@@ -6,34 +6,27 @@ import { isHighLow, getCurrentTick, isBot } from '@deriv/shared';
 import ContractTypeCell from './contract-type-cell.jsx';
 import Button from '../../button';
 import Icon from '../../icon';
+import Text from '../../text';
 import ProgressSlider from '../../progress-slider';
 import DesktopWrapper from '../../desktop-wrapper';
 import MobileWrapper from '../../mobile-wrapper';
 
 const ContractCardHeader = ({
     contract_info,
+    display_name,
     getCardLabels,
+    getContractTypeDisplay,
     has_progress_slider,
     id,
     is_mobile,
     is_sell_requested,
     is_valid_to_sell,
-    getContractTypeDisplay,
     onClickSell,
     server_time,
 }) => {
     const current_tick = contract_info.tick_count ? getCurrentTick(contract_info) : null;
-    const {
-        underlying,
-        display_name,
-        multiplier,
-        contract_type,
-        shortcode,
-        purchase_time,
-        date_expiry,
-        tick_count,
-        is_sold,
-    } = contract_info;
+    const { underlying, multiplier, contract_type, shortcode, purchase_time, date_expiry, tick_count, is_sold } =
+        contract_info;
 
     return (
         <>
@@ -45,7 +38,9 @@ const ContractCardHeader = ({
             >
                 <div id='dc-contract_card_underlying_label' className='dc-contract-card__underlying-name'>
                     <Icon icon={underlying ? `IcUnderlying${underlying}` : 'IcUnknown'} width={40} size={32} />
-                    <span className='dc-contract-card__symbol'>{display_name}</span>
+                    <Text size='xxs' className='dc-contract-card__symbol' weight='bold'>
+                        {display_name || contract_info.display_name}
+                    </Text>
                 </div>
                 <div id='dc-contract_card_type_label' className='dc-contract-card__type'>
                     <ContractTypeCell
@@ -106,12 +101,13 @@ const ContractCardHeader = ({
 
 ContractCardHeader.propTypes = {
     contract_info: PropTypes.object,
+    display_name: PropTypes.string,
     getCardLabels: PropTypes.func,
     getContractTypeDisplay: PropTypes.func,
     has_progress_slider: PropTypes.bool,
     is_mobile: PropTypes.bool,
     is_sell_requested: PropTypes.bool,
-    is_sold: PropTypes.bool,
+    is_valid_to_sell: PropTypes.bool,
     onClickSell: PropTypes.func,
     server_time: PropTypes.object,
 };

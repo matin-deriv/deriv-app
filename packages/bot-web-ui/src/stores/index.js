@@ -17,15 +17,19 @@ import RoutePromptDialogStore from './route-prompt-dialog-store';
 import DataCollectionStore from './data-collection-store';
 import BlocklyStore from './blockly-store';
 import SelfExclusionStore from './self-exclusion-store';
+import ToolboxStore from './toolbox-store';
+import AppStore from './app-store';
 
 export default class RootStore {
     constructor(core, ws, dbot) {
         this.core = core;
         this.ui = core.ui;
         this.common = core.common;
+        this.notifications = core.notifications;
         this.ws = ws;
         this.dbot = dbot;
         this.server_time = core.common.server_time;
+        this.app = new AppStore(this);
         this.summary_card = new SummaryCardStore(this);
         this.blockly_store = new BlocklyStore(this);
         this.download = new DownloadStore(this);
@@ -39,6 +43,7 @@ export default class RootStore {
         this.summary = new SummaryStore(this);
         this.transactions = new TransactionsStore(this);
         this.toolbar = new ToolbarStore(this);
+        this.toolbox = new ToolboxStore(this);
         this.quick_strategy = new QuickStrategyStore(this);
         this.route_prompt_dialog = new RoutePromptDialogStore(this);
         this.self_exclusion = new SelfExclusionStore(this);

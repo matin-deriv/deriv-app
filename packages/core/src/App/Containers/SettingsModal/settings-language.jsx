@@ -1,11 +1,13 @@
 import React from 'react';
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
-import { Icon } from '@deriv/components';
-import { Localize } from '@deriv/translations';
-import { getAllowedLanguages, changeLanguage, currentLanguage } from 'Utils/Language';
+import { useTranslation } from 'react-i18next';
+import { Icon, Text } from '@deriv/components';
+import { Localize, getAllowedLanguages } from '@deriv/translations';
+import { changeLanguage } from 'Utils/Language';
+import { connect } from 'Stores/connect';
 
-const isCurrentLanguage = lang => lang === currentLanguage;
+const isCurrentLanguage = (lang, current_language) => lang === current_language;
 
 const NonClickableLink = ({ children, lang }) => (
     <div
@@ -35,35 +37,43 @@ const LanguageLink = ({ lang }) => (
     </React.Fragment>
 );
 
-const LanguageSettings = () => (
-    <div className='settings-language'>
-        <div className='settings-language__language-header'>
-            <span>
-                <Localize i18n_default_text='Select language' />
-            </span>
+const LanguageSettings = ({ changeCurrentLanguage, current_language, toggleSettingsModal }) => {
+    const { i18n } = useTranslation();
+
+    return (
+        <div className='settings-language'>
+            <div className='settings-language__language-header'>
+                <Text size='xs' color='prominent' weight='bold'>
+                    <Localize i18n_default_text='Select language' />
+                </Text>
+            </div>
+            <div className='settings-language__language-container'>
+                {Object.keys(getAllowedLanguages()).map(key =>
+                    isCurrentLanguage(key) ? (
+                        <NonClickableLink lang={key} key={key}>
+                            <LanguageLink lang={key} />
+                        </NonClickableLink>
+                    ) : (
+                        <span
+                            id={`dt_settings_${key}_button`}
+                            key={key}
+                            onClick={() => {
+                                changeLanguage(key, changeCurrentLanguage);
+                                i18n.changeLanguage(key);
+                                toggleSettingsModal();
+                            }}
+                            className={classNames('settings-language__language-link', {
+                                'settings-language__language-link--active': isCurrentLanguage(key, current_language),
+                            })}
+                        >
+                            <LanguageLink lang={key} key={key} />
+                        </span>
+                    )
+                )}
+            </div>
         </div>
-        <div className='settings-language__language-container'>
-            {Object.keys(getAllowedLanguages()).map(key =>
-                isCurrentLanguage(key) ? (
-                    <NonClickableLink lang={key} key={key}>
-                        <LanguageLink lang={key} />
-                    </NonClickableLink>
-                ) : (
-                    <span
-                        id={`dt_settings_${key}_button`}
-                        key={key}
-                        onClick={() => changeLanguage(key)}
-                        className={classNames('settings-language__language-link', {
-                            'settings-language__language-link--active': isCurrentLanguage(key),
-                        })}
-                    >
-                        <LanguageLink lang={key} key={key} />
-                    </span>
-                )
-            )}
-        </div>
-    </div>
-);
+    );
+};
 
 LanguageLink.propTypes = {
     lang: PropTypes.string,
@@ -74,4 +84,8 @@ NonClickableLink.propTypes = {
     lang: PropTypes.string,
 };
 
-export default LanguageSettings;
+export default connect(({ common, ui }) => ({
+    changeCurrentLanguage: common.changeCurrentLanguage,
+    current_language: common.current_language,
+    toggleSettingsModal: ui.toggleSettingsModal,
+}))(LanguageSettings);

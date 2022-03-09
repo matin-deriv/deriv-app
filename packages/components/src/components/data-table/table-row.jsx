@@ -8,15 +8,18 @@ import TableRowInfo from './table-row-info.jsx';
 const TableRow = ({
     className,
     columns,
+    content_loader,
     getActionColumns,
     id,
     is_footer,
     is_header,
-    show_preloader = false,
+    passthrough,
     replace,
     row_obj = {},
+    show_preloader = false,
     to,
-    content_loader,
+    measure,
+    is_dynamic_height,
 }) => {
     const action_columns = getActionColumns && getActionColumns({ row_obj, is_header, is_footer });
 
@@ -25,7 +28,7 @@ const TableRow = ({
         if (!is_header) {
             const cell_value = row_obj[col_index] || '';
             cell_content = renderCellContent
-                ? renderCellContent({ cell_value, col_index, row_obj, is_footer })
+                ? renderCellContent({ cell_value, col_index, row_obj, is_footer, passthrough })
                 : cell_value;
         }
         return (
@@ -62,7 +65,14 @@ const TableRow = ({
         </div>
     ) : (
         <div className={`${className}__row_wrapper`}>
-            <TableRowInfo className={row_class_name} cells={cells} replace={replace} is_footer={is_footer} />
+            <TableRowInfo
+                className={row_class_name}
+                cells={cells}
+                replace={replace}
+                is_footer={is_footer}
+                is_dynamic_height={is_dynamic_height}
+                measure={measure}
+            />
             {action_columns}
         </div>
     );
@@ -74,10 +84,15 @@ TableRow.propTypes = {
     id: PropTypes.number,
     is_footer: PropTypes.bool,
     is_header: PropTypes.bool,
-    replace: PropTypes.object,
+    passthrough: PropTypes.object,
+    replace: PropTypes.shape({
+        component: PropTypes.object,
+        message: PropTypes.string,
+    }),
     row_obj: PropTypes.object,
     to: PropTypes.string,
     content_loader: PropTypes.elementType,
+    measure: PropTypes.func,
 };
 
 export default TableRow;

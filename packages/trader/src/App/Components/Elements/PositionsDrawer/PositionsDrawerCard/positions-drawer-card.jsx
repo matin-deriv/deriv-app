@@ -2,17 +2,21 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ContractCard, DesktopWrapper, MobileWrapper } from '@deriv/components';
-import { getContractPath, isMultiplierContract } from '@deriv/shared';
+import { ContractCard } from '@deriv/components';
+import { getContractPath, isCryptoContract, isMultiplierContract } from '@deriv/shared';
 import { getCardLabels, getContractTypeDisplay } from 'Constants/contract';
 import { connect } from 'Stores/connect';
+import { connectWithContractUpdate } from 'Stores/Modules/Contract/Helpers/multiplier';
+import { getEndTime } from 'Stores/Modules/Contract/Helpers/logic';
 
 const PositionsDrawerCard = ({
     addToast,
     className,
+    display_name,
     contract_info,
     contract_update,
     currency,
+    current_focus,
     getContractById,
     is_mobile,
     is_sell_requested,
@@ -22,19 +26,23 @@ const PositionsDrawerCard = ({
     onClickCancel,
     onClickSell,
     onClickRemove,
+    onFooterEntered,
     onMouseEnter,
     onMouseLeave,
     removeToast,
     result,
     setCurrentFocus,
     server_time,
+    should_show_transition,
     should_show_cancellation_warning,
-    show_transition,
     status,
     toggleCancellationWarning,
     toggleUnsupportedContractModal,
 }) => {
     const is_multiplier = isMultiplierContract(contract_info.contract_type);
+    const is_crypto = isCryptoContract(contract_info.underlying);
+    const has_progress_slider = !is_multiplier || (is_crypto && is_multiplier);
+    const has_ended = !!getEndTime(contract_info);
 
     const loader_el = (
         <div className='dc-contract-card__content-loader'>
@@ -45,9 +53,10 @@ const PositionsDrawerCard = ({
     const card_header = (
         <ContractCard.Header
             contract_info={contract_info}
+            display_name={display_name}
             getCardLabels={getCardLabels}
             getContractTypeDisplay={getContractTypeDisplay}
-            has_progress_slider={!is_multiplier}
+            has_progress_slider={!is_mobile && has_progress_slider}
             is_mobile={is_mobile}
             is_positions={true}
             is_sell_requested={is_sell_requested}
@@ -58,65 +67,86 @@ const PositionsDrawerCard = ({
 
     const card_body = (
         <ContractCard.Body
+            addToast={addToast}
+            connectWithContractUpdate={connectWithContractUpdate}
             contract_info={contract_info}
             contract_update={contract_update}
             currency={currency}
-            getCardLabels={getCardLabels}
-            is_mobile={is_mobile}
-            is_multiplier={is_multiplier}
-            status={status}
-            server_time={server_time}
-        />
-    );
-
-    const card_body_wrapper = (
-        <React.Fragment>
-            <DesktopWrapper>{card_body}</DesktopWrapper>
-            <MobileWrapper>
-                <div
-                    className={
-                        ('dc-contract-card__separatorclass',
-                        classNames({
-                            'dc-contract-card__body-wrapper': !is_multiplier,
-                        }))
-                    }
-                >
-                    {card_body}
-                </div>
-            </MobileWrapper>
-        </React.Fragment>
-    );
-
-    const card_footer = (
-        <ContractCard.Footer
-            addToast={addToast}
-            contract_info={contract_info}
+            current_focus={current_focus}
             getCardLabels={getCardLabels}
             getContractById={getContractById}
+            onMouseLeave={() => {
+                if (typeof onMouseLeave === 'function') onMouseLeave();
+            }}
+            is_mobile={is_mobile}
             is_multiplier={is_multiplier}
-            is_positions={true}
-            is_sell_requested={is_sell_requested}
-            onClickCancel={onClickCancel}
-            onClickSell={onClickSell}
+            is_sold={has_ended}
+            has_progress_slider={is_mobile && has_progress_slider}
             removeToast={removeToast}
-            setCurrentFocus={setCurrentFocus}
             server_time={server_time}
+            setCurrentFocus={setCurrentFocus}
             should_show_cancellation_warning={should_show_cancellation_warning}
             status={status}
             toggleCancellationWarning={toggleCancellationWarning}
         />
     );
 
+    const card_footer = (
+        <ContractCard.Footer
+            contract_info={contract_info}
+            getCardLabels={getCardLabels}
+            is_multiplier={is_multiplier}
+            is_positions={true}
+            is_sell_requested={is_sell_requested}
+            onClickCancel={onClickCancel}
+            onClickSell={onClickSell}
+            onFooterEntered={onFooterEntered}
+            server_time={server_time}
+            should_show_transition={should_show_transition}
+        />
+    );
+
     const contract_el = (
         <React.Fragment>
             {card_header}
-            {card_body_wrapper}
+            {card_body}
         </React.Fragment>
     );
 
-    // When scrolling fast in react-window, sometimes card is stuck with enter transition class and it is not removed after timeout making the card to be invisible.
-    // So added a class based on isScrolling from react-window to show the transition.
-    const transition_class = show_transition && 'dc-contract-card__wrapper--transition';
+    const supported_contract_card = (
+        <div
+            className={classNames('dc-contract-card', {
+                'dc-contract-card--green': !is_multiplier && profit_loss > 0 && !result,
+                'dc-contract-card--red': !is_multiplier && profit_loss < 0 && !result,
+            })}
+            onClick={() => toggleUnsupportedContractModal(true)}
+        >
+            {contract_info.underlying ? contract_el : loader_el}
+        </div>
+    );
+
+    const unsupported_contract_card = is_link_disabled ? (
+        <div
+            className={classNames('dc-contract-card', {
+                'dc-contract-card--green': !is_multiplier && profit_loss > 0 && !result,
+                'dc-contract-card--red': !is_multiplier && profit_loss < 0 && !result,
+            })}
+        >
+            {contract_info.underlying ? contract_el : loader_el}
+        </div>
+    ) : (
+        <NavLink
+            className={classNames('dc-contract-card', {
+                'dc-contract-card--green': !is_multiplier && profit_loss > 0 && !result,
+                'dc-contract-card--red': !is_multiplier && profit_loss < 0 && !result,
+            })}
+            to={{
+                pathname: `/contract/${contract_info.contract_id}`,
+            }}
+        >
+            {contract_info.underlying ? contract_el : loader_el}
+        </NavLink>
+    );
 
     return (
         <ContractCard
@@ -134,52 +164,18 @@ const PositionsDrawerCard = ({
         >
             <div
                 id={`dc_contract_card_${contract_info.contract_id}`}
-                className={classNames('dc-contract-card__wrapper', transition_class, className)}
+                className={className}
                 onMouseEnter={() => {
-                    if (typeof onMouseEnter === 'function') onMouseEnter(true, contract_info);
+                    if (typeof onMouseEnter === 'function') onMouseEnter();
                 }}
                 onMouseLeave={() => {
-                    if (typeof onMouseLeave === 'function') onMouseLeave(false, contract_info);
+                    if (typeof onMouseLeave === 'function') onMouseLeave();
                 }}
                 onClick={() => {
-                    if (typeof onMouseLeave === 'function') onMouseLeave(false, contract_info);
+                    if (typeof onMouseLeave === 'function') onMouseLeave();
                 }}
             >
-                {is_unsupported ? (
-                    <div
-                        className={classNames('dc-contract-card', {
-                            'dc-contract-card--green': !is_multiplier && profit_loss > 0 && !result,
-                            'dc-contract-card--red': !is_multiplier && profit_loss < 0 && !result,
-                        })}
-                        onClick={() => toggleUnsupportedContractModal(true)}
-                    >
-                        {contract_info.underlying ? contract_el : loader_el}
-                    </div>
-                ) : is_link_disabled ? (
-                    <div
-                        className={classNames('dc-contract-card', {
-                            'dc-contract-card--green': !is_multiplier && profit_loss > 0 && !result,
-                            'dc-contract-card--red': !is_multiplier && profit_loss < 0 && !result,
-                        })}
-                    >
-                        {contract_info.underlying ? contract_el : loader_el}
-                    </div>
-                ) : (
-                    <NavLink
-                        className={classNames('dc-contract-card', {
-                            'dc-contract-card--green': !is_multiplier && profit_loss > 0 && !result,
-                            'dc-contract-card--red': !is_multiplier && profit_loss < 0 && !result,
-                        })}
-                        to={{
-                            pathname: `/contract/${contract_info.contract_id}`,
-                            state: {
-                                // from_table_row: true,
-                            },
-                        }}
-                    >
-                        {contract_info.underlying ? contract_el : loader_el}
-                    </NavLink>
-                )}
+                {is_unsupported ? supported_contract_card : unsupported_contract_card}
                 {card_footer}
             </div>
         </ContractCard>
@@ -191,6 +187,7 @@ PositionsDrawerCard.propTypes = {
     className: PropTypes.string,
     contract_info: PropTypes.object,
     currency: PropTypes.string,
+    current_focus: PropTypes.string,
     current_tick: PropTypes.number,
     duration: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     duration_unit: PropTypes.string,
@@ -204,6 +201,7 @@ PositionsDrawerCard.propTypes = {
     is_valid_to_sell: PropTypes.oneOfType([PropTypes.number, PropTypes.bool]),
     onClickRemove: PropTypes.func,
     onClickSell: PropTypes.func,
+    onClickCancel: PropTypes.func,
     profit_loss: PropTypes.number,
     result: PropTypes.string,
     sell_time: PropTypes.number,
@@ -213,12 +211,19 @@ PositionsDrawerCard.propTypes = {
     type: PropTypes.string,
 };
 
-export default connect(({ modules, ui }) => ({
+export default connect(({ modules, ui, client, common }) => ({
+    currency: client.currency,
+    server_time: common.server_time,
     addToast: ui.addToast,
+    current_focus: ui.current_focus,
+    onClickCancel: modules.portfolio.onClickCancel,
+    onClickSell: modules.portfolio.onClickSell,
+    onClickRemove: modules.portfolio.removePositionById,
     getContractById: modules.contract_trade.getContractById,
     is_mobile: ui.is_mobile,
     removeToast: ui.removeToast,
     setCurrentFocus: ui.setCurrentFocus,
     should_show_cancellation_warning: ui.should_show_cancellation_warning,
     toggleCancellationWarning: ui.toggleCancellationWarning,
+    toggleUnsupportedContractModal: ui.toggleUnsupportedContractModal,
 }))(PositionsDrawerCard);

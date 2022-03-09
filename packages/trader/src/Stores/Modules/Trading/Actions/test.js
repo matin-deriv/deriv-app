@@ -1,4 +1,4 @@
-import { WS } from 'Services/ws-methods';
+import { WS } from '@deriv/shared';
 
 /* This action does not modify state directlly.
  * The payload will be the callback that get's called for each tick
@@ -11,7 +11,7 @@ const ticksCallback = response => {
     cb(data);
 };
 
-export const getTicks = function({ symbol }, callback) {
+export const getTicks = function ({ symbol }, callback) {
     cb = callback;
     WS.forgetAll('ticks').then(() => {
         WS.subscribeTicks(symbol, ticksCallback);

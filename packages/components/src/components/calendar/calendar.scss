@@ -1,7 +1,5 @@
 /** @define dc-calendar */
 .dc-calendar {
-    position: absolute;
-    top: 0;
     outline: 0;
     border-radius: 5px;
     z-index: 999;
@@ -131,14 +129,6 @@
             right: 14%;
         }
     }
-    &__text {
-        @include typeface(--small-center-normal-black, unset);
-        color: var(--text-general);
-
-        &--bold {
-            font-weight: bold;
-        }
-    }
     &__cell {
         @include typeface(--small-left-normal-black);
         align-self: center;
@@ -148,7 +138,7 @@
         color: var(--text-general);
         box-sizing: border-box;
 
-        &:hover:not(.dc-calendar__cell--disabled) {
+        &--hover {
             color: var(--text-general);
             background: var(--state-hover);
         }
@@ -171,13 +161,11 @@
             @include typeface(--paragraph-left-bold-black);
             color: var(--text-prominent);
         }
-        &--disabled:hover {
-            cursor: default;
-        }
-        &--disabled:not(.dc-calendar__cell--today):not(.dc-calendar__cell--between-hover):not(.dc-calendar__cell--between),
-        &--other:not(.dc-calendar__cell--today):not(.dc-calendar__cell--active):not(.dc-calendar__cell--between-hover):not(.dc-calendar__cell--between) {
+        &--disabled:not(.dc-calendar__cell--today):not(.dc-calendar__cell--between),
+        &--other:not(.dc-calendar__cell--today):not(.dc-calendar__cell--active):not(.dc-calendar__cell--between) {
             color: var(--text-disabled);
             transition: none;
+            cursor: default;
         }
         &--is-hidden {
             display: none;
@@ -247,7 +235,7 @@
         &-tooltip {
             position: absolute;
             display: inline-grid;
-            cursor: default;
+            cursor: pointer;
             height: 0;
             top: 0;
             left: 0;

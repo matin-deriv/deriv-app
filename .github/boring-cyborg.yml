@@ -1,6 +1,8 @@
 labelPRBasedOnFilePath:
   Account:
     - packages/account/**/*
+  AppStore:
+    - packages/appstore/**/*
   Bot:
     - packages/bot-*/**/*
   Components:

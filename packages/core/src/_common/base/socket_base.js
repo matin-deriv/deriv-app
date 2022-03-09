@@ -19,12 +19,18 @@ const BinarySocketBase = (() => {
 
     let config = {};
     let wrong_app_id = 0;
-    let is_available = true;
     let is_disconnect_called = false;
     let is_connected_before = false;
+    let is_switching_socket = false;
 
-    const getSocketUrl = () =>
-        `wss://${getSocketURL()}/websockets/v3?app_id=${getAppId()}&l=${getLanguage()}&brand=${website_name.toLowerCase()}`;
+    const availability = {
+        is_up: true,
+        is_updating: false,
+        is_down: false,
+    };
+
+    const getSocketUrl = language =>
+        `wss://${getSocketURL()}/websockets/v3?app_id=${getAppId()}&l=${language}&brand=${website_name.toLowerCase()}`;
 
     const isReady = () => hasReadyState(1);
 
@@ -34,9 +40,10 @@ const BinarySocketBase = (() => {
         binary_socket.close();
     };
 
-    const closeAndOpenNewConnection = () => {
+    const closeAndOpenNewConnection = (language = getLanguage()) => {
         close();
-        openNewConnection(true);
+        is_switching_socket = true;
+        openNewConnection(language);
     };
 
     const hasReadyState = (...states) => binary_socket && states.some(s => binary_socket.readyState === s);
@@ -48,14 +55,14 @@ const BinarySocketBase = (() => {
         client_store = client;
     };
 
-    const openNewConnection = is_switching_socket => {
+    const openNewConnection = (language = getLanguage()) => {
         if (wrong_app_id === getAppId()) return;
 
         if (!is_switching_socket) config.wsEvent('init');
 
         if (isClose()) {
             is_disconnect_called = false;
-            binary_socket = new WebSocket(getSocketUrl());
+            binary_socket = new WebSocket(getSocketUrl(language));
             deriv_api = new DerivAPIBasic({
                 connection: binary_socket,
                 storage: SocketCache,
@@ -104,6 +111,8 @@ const BinarySocketBase = (() => {
         deriv_api.onClose().subscribe(() => {
             if (!is_switching_socket) {
                 config.wsEvent('close');
+            } else {
+                is_switching_socket = false;
             }
 
             if (wrong_app_id !== getAppId() && typeof config.onDisconnect === 'function' && !is_disconnect_called) {
@@ -113,11 +122,18 @@ const BinarySocketBase = (() => {
         });
     };
 
-    const availability = status => {
-        if (typeof status !== 'undefined') {
-            is_available = !!status;
-        }
-        return is_available;
+    const isSiteUp = status => /^up$/i.test(status);
+
+    const isSiteUpdating = status => /^updating$/i.test(status);
+
+    const isSiteDown = status => /^down$/i.test(status);
+
+    // if status is up or updating, consider site available
+    // if status is down, consider site unavailable
+    const setAvailability = status => {
+        availability.is_up = isSiteUp(status);
+        availability.is_updating = isSiteUpdating(status);
+        availability.is_down = isSiteDown(status);
     };
 
     const excludeAuthorize = type => !(type === 'authorize' && !client_store.is_logged_in);
@@ -164,6 +180,15 @@ const BinarySocketBase = (() => {
 
     const cashier = (action, parameters = {}) => deriv_api.send({ cashier: action, ...parameters });
 
+    const cashierPayments = ({ provider, transaction_type }) =>
+        deriv_api.send({ cashier_payments: 1, provider, transaction_type });
+
+    const subscribeCashierPayments = cb =>
+        subscribe({ cashier_payments: 1, provider: 'crypto', transaction_type: 'all' }, cb);
+
+    const cancelCryptoTransaction = transaction_id =>
+        deriv_api.send({ cashier_withdrawal_cancel: 1, id: transaction_id });
+
     const newAccountVirtual = (verification_code, client_password, residence, device_data) =>
         deriv_api.send({
             new_account_virtual: 1,
@@ -193,21 +218,6 @@ const BinarySocketBase = (() => {
             ...values,
         });
 
-    const mt5PasswordChange = (login, old_password, new_password, password_type, values) =>
-        deriv_api.send({
-            mt5_password_change: 1,
-            login,
-            old_password,
-            new_password,
-            password_type,
-            ...values,
-        });
-    const mt5PasswordReset = payload =>
-        deriv_api.send({
-            ...payload,
-            mt5_password_reset: 1,
-        });
-
     const getFinancialAssessment = () =>
         deriv_api.send({
             get_financial_assessment: 1,
@@ -216,13 +226,42 @@ const BinarySocketBase = (() => {
     const profitTable = (limit, offset, date_boundaries) =>
         deriv_api.send({ profit_table: 1, description: 1, limit, offset, ...date_boundaries });
 
-    const statement = (limit, offset, date_boundaries) =>
-        deriv_api.send({ statement: 1, description: 1, limit, offset, ...date_boundaries });
+    const statement = (limit, offset, other_properties) =>
+        deriv_api.send({ statement: 1, description: 1, limit, offset, ...other_properties });
 
-    const verifyEmail = (email, type) => deriv_api.send({ verify_email: email, type });
+    const verifyEmail = (email, type, payload = {}) => deriv_api.send({ verify_email: email, type, ...payload });
+
+    const tradingPlatformPasswordChange = payload =>
+        deriv_api.send({
+            trading_platform_password_change: 1,
+            ...payload,
+        });
+
+    const tradingPlatformInvestorPasswordChange = payload =>
+        deriv_api.send({
+            trading_platform_investor_password_change: 1,
+            ...payload,
+        });
+
+    const tradingPlatformInvestorPasswordReset = payload =>
+        deriv_api.send({
+            trading_platform_investor_password_reset: 1,
+            ...payload,
+        });
+
+    const tradingPlatformPasswordReset = payload =>
+        deriv_api.send({
+            trading_platform_password_reset: 1,
+            ...payload,
+        });
 
     const paymentAgentList = (country, currency) =>
         deriv_api.send({ paymentagent_list: country, ...(currency && { currency }) });
+
+    const allPaymentAgentList = country => deriv_api.send({ paymentagent_list: country });
+
+    const paymentAgentDetails = (passthrough, req_id) =>
+        deriv_api.send({ paymentagent_details: 1, passthrough, req_id });
 
     const paymentAgentWithdraw = ({ loginid, currency, amount, verification_code, dry_run = 0 }) =>
         deriv_api.send({
@@ -232,6 +271,22 @@ const BinarySocketBase = (() => {
             paymentagent_withdraw: 1,
             dry_run,
             paymentagent_loginid: loginid,
+        });
+
+    const cryptoWithdraw = ({ address, amount, verification_code, dry_run = 0 }) =>
+        deriv_api.send({
+            cashier: 'withdraw',
+            provider: 'crypto',
+            type: 'api',
+            address,
+            amount,
+            verification_code,
+            dry_run,
+        });
+
+    const cryptoConfig = () =>
+        deriv_api.send({
+            crypto_config: 1,
         });
 
     const paymentAgentTransfer = ({ amount, currency, description, transfer_to, dry_run = 0 }) =>
@@ -279,7 +334,7 @@ const BinarySocketBase = (() => {
 
     const p2pAdvertiserInfo = () => deriv_api.send({ p2p_advertiser_info: 1 });
 
-    const loginHistory = limit =>
+    const fetchLoginHistory = limit =>
         deriv_api.send({
             login_history: 1,
             limit,
@@ -292,6 +347,32 @@ const BinarySocketBase = (() => {
 
     const realityCheck = () => deriv_api.send({ reality_check: 1 });
 
+    const tradingServers = platform => deriv_api.send({ platform, trading_servers: 1 });
+
+    const tradingPlatformAccountsList = platform =>
+        deriv_api.send({
+            trading_platform_accounts: 1,
+            platform,
+        });
+
+    const tradingPlatformNewAccount = values =>
+        deriv_api.send({
+            trading_platform_new_account: 1,
+            ...values,
+        });
+
+    const triggerMt5DryRun = ({ email }) =>
+        deriv_api.send({
+            account_type: 'financial',
+            dry_run: 1,
+            email,
+            leverage: 100,
+            mainPassword: 'Test1234',
+            mt5_account_type: 'financial_stp',
+            mt5_new_account: 1,
+            name: 'test real labuan financial stp',
+        });
+
     return {
         init,
         openNewConnection,
@@ -299,10 +380,17 @@ const BinarySocketBase = (() => {
         wait,
         availability,
         hasReadyState,
-        clear: () => {},
-        sendBuffered: () => {},
+        isSiteDown,
+        isSiteUpdating,
+        clear: () => {
+            // do nothing.
+        },
+        sendBuffered: () => {
+            // do nothing.
+        },
         getSocket: () => binary_socket,
         get: () => deriv_api,
+        getAvailability: () => availability,
         setOnDisconnect: onDisconnect => {
             config.onDisconnect = onDisconnect;
         },
@@ -321,14 +409,17 @@ const BinarySocketBase = (() => {
         buyAndSubscribe,
         sell,
         cashier,
+        cashierPayments,
+        subscribeCashierPayments,
+        cancelCryptoTransaction,
         cancelContract,
         close,
+        cryptoWithdraw,
+        cryptoConfig,
         contractUpdate,
         contractUpdateHistory,
         getFinancialAssessment,
         mt5NewAccount,
-        mt5PasswordChange,
-        mt5PasswordReset,
         newAccountVirtual,
         newAccountReal,
         newAccountRealMaltaInvest,
@@ -337,12 +428,19 @@ const BinarySocketBase = (() => {
         profitTable,
         statement,
         verifyEmail,
+        tradingPlatformPasswordChange,
+        tradingPlatformPasswordReset,
+        tradingPlatformInvestorPasswordChange,
+        tradingPlatformInvestorPasswordReset,
         activeSymbols,
         paymentAgentList,
+        allPaymentAgentList,
+        paymentAgentDetails,
         paymentAgentWithdraw,
         paymentAgentTransfer,
         setAccountCurrency,
         balanceAll,
+        setAvailability,
         subscribeBalanceAll,
         subscribeBalanceActiveAccount,
         subscribeProposal,
@@ -353,10 +451,14 @@ const BinarySocketBase = (() => {
         subscribeWebsiteStatus,
         tncApproval,
         transferBetweenAccounts,
-        loginHistory,
+        fetchLoginHistory,
         closeAndOpenNewConnection,
         accountStatistics,
         realityCheck,
+        tradingServers,
+        tradingPlatformAccountsList,
+        tradingPlatformNewAccount,
+        triggerMt5DryRun,
     };
 })();
 
@@ -389,7 +491,7 @@ const proxyForAuthorize = obj =>
     new Proxy(obj, {
         get(target, field) {
             if (typeof target[field] !== 'function') {
-                return proxyForAuthorize(target[field], proxied_socket_base[field]);
+                return proxyForAuthorize(target[field]);
             }
             return (...args) => BinarySocketBase.wait('authorize').then(() => target[field](...args));
         },

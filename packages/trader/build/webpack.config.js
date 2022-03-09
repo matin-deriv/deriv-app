@@ -1,54 +1,35 @@
 const path = require('path');
 const { ALIASES, IS_RELEASE, MINIMIZERS, plugins, rules } = require('./constants');
 
-module.exports = function(env, argv) {
-    const base = env && env.base && env.base != true ? '/' + env.base + '/' : '/';
+module.exports = function (env) {
+    const base = env && env.base && env.base !== true ? `/${env.base}/` : '/';
 
     return {
-        context: path.resolve(__dirname, '../src'),
-        devtool: IS_RELEASE ? 'source-map' : 'cheap-module-eval-source-map',
-        entry: path.resolve(__dirname, '../src', 'index.js'),
+        context: path.resolve(__dirname, '../'),
+        devtool: IS_RELEASE ? undefined : 'eval-cheap-module-source-map',
+        entry: {
+            trader: path.resolve(__dirname, '../src', 'index.tsx'),
+            CFDStore: 'Stores/Modules/CFD/cfd-store.js',
+        },
         mode: IS_RELEASE ? 'production' : 'development',
         module: {
             rules: rules(),
         },
         resolve: {
             alias: ALIASES,
-            extensions: ['.js', '.jsx'],
+            extensions: ['.js', '.jsx', '.ts', '.tsx'],
         },
         optimization: {
-            namedChunks: true,
-            namedModules: true,
+            chunkIds: 'named',
+            moduleIds: 'named',
             minimize: IS_RELEASE,
             minimizer: MINIMIZERS,
-            // splitChunks: {
-            //     chunks: 'all',
-            //     minSize: 30000,
-            //     maxSize: 0,
-            //     minChunks: 1,
-            //     maxAsyncRequests: 5,
-            //     maxInitialRequests: 3,
-            //     automaticNameDelimiter: '~',
-            //     automaticNameMaxLength: 30,
-            //     name: true,
-            //     cacheGroups: {
-            //         vendors: {
-            //             test: /[\\/]node_modules[\\/]/,
-            //             priority: -10
-            //         },
-            //         default: {
-            //             minChunks: 2,
-            //             priority: -20,
-            //             reuseExistingChunk: true
-            //         }
-            //     }
-            // }
         },
         output: {
-            filename: 'js/trader.main.js',
+            filename: 'trader/js/[name].js',
             publicPath: base,
             path: path.resolve(__dirname, '../dist'),
-            chunkFilename: 'js/trader.[name].[contenthash].js',
+            chunkFilename: 'trader/js/trader.[name].[contenthash].js',
             libraryExport: 'default',
             library: '@deriv/trader',
             libraryTarget: 'umd',

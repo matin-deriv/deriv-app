@@ -1,7 +1,7 @@
 import { observable, action } from 'mobx';
 import { localize, getLanguage } from '@deriv/translations';
 import { importExternal, config } from '@deriv/bot-skeleton';
-import { button_status } from '../constants/button-status';
+import { button_status } from 'Constants/button-status';
 
 export default class GoogleDriveStore {
     constructor(root_store) {
@@ -29,7 +29,7 @@ export default class GoogleDriveStore {
                     .init({
                         apiKey: this.api_key,
                         clientId: this.client_id,
-                        scope: 'https://www.googleapis.com/auth/drive',
+                        scope: 'https://www.googleapis.com/auth/drive.file',
                         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                     })
                     .then(

@@ -1,9 +1,9 @@
 import classNames from 'classnames';
-import { withRouter } from 'react-router';
 import PropTypes from 'prop-types';
-import React from 'react';
+import * as React from 'react';
+import { withRouter } from 'react-router';
 import {
-    AccountLimits,
+    AccountLimits as AccountLimitsFooter,
     EndpointNote,
     GoToDeriv,
     HelpCentre,
@@ -13,7 +13,7 @@ import {
     ToggleFullScreen,
     ToggleSettings,
 } from 'App/Components/Layout/Footer';
-import LiveChat from 'App/Components/Elements/live-chat.jsx';
+import LiveChat from 'App/Components/Elements/LiveChat';
 import { connect } from 'Stores/connect';
 import ServerTime from '../server-time.jsx';
 
@@ -35,7 +35,6 @@ const Footer = ({
     footer_extensions,
     is_app_disabled,
     is_eu,
-    is_eu_enabled, // TODO [deriv-eu] remove is_eu_enabled check once EU is ready for production
     is_logged_in,
     is_route_modal_on,
     is_settings_modal_on,
@@ -72,14 +71,9 @@ const Footer = ({
                 <FooterIconSeparator />
                 <GoToDeriv />
                 <ResponsibleTrading />
-                {is_logged_in && <AccountLimits />}
-                {is_eu_enabled && !is_virtual && (
-                    <RegulatoryInformation
-                        landing_company={
-                            landing_company_shortcode // TODO [deriv-eu] remove is_eu_enabled check once EU is ready for production
-                        }
-                        is_eu={is_eu}
-                    />
+                {is_logged_in && <AccountLimitsFooter />}
+                {is_logged_in && !is_virtual && (
+                    <RegulatoryInformation landing_company={landing_company_shortcode} is_eu={is_eu} />
                 )}
                 <FooterIconSeparator />
                 <HelpCentre />
@@ -114,7 +108,6 @@ export default withRouter(
         is_app_disabled: ui.is_app_disabled,
         is_route_modal_on: ui.is_route_modal_on,
         is_logged_in: client.is_logged_in,
-        is_eu_enabled: ui.is_eu_enabled, // TODO [deriv-eu] remove is_eu_enabled check once EU is ready for production
         is_eu: client.is_eu,
         is_loading: ui.is_loading,
         is_settings_modal_on: ui.is_settings_modal_on,

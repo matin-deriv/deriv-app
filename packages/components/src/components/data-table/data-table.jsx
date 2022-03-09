@@ -1,7 +1,9 @@
 import classNames from 'classnames';
-import { VariableSizeList as List } from 'react-window';
+import { List } from 'react-virtualized/dist/es/List';
 import PropTypes from 'prop-types';
 import React from 'react';
+import { AutoSizer } from 'react-virtualized/dist/es/AutoSizer';
+import { CellMeasurer, CellMeasurerCache } from 'react-virtualized/dist/es/CellMeasurer';
 import TableRow from './table-row.jsx';
 import ThemedScrollbars from '../themed-scrollbars';
 
@@ -10,140 +12,154 @@ import ThemedScrollbars from '../themed-scrollbars';
       2. implement filtering per column
 */
 
-const ThemedScrollbarsWrapper = React.forwardRef((props, ref) => (
-    <ThemedScrollbars {...props} forwardedRef={ref}>
-        {props.children}
-    </ThemedScrollbars>
-));
-// Display name is required by Developer Tools to give a name to the components we use.
-// If a component doesn't have a displayName is will be shown as <Unknown />. Hence, name is set.
-ThemedScrollbarsWrapper.displayName = 'ThemedScrollbars';
+const DataTable = ({
+    children,
+    className,
+    columns,
+    content_loader,
+    data_source,
+    footer,
+    getActionColumns,
+    getRowAction,
+    getRowSize,
+    id,
+    keyMapper,
+    onScroll,
+    passthrough,
+    preloaderCheck,
+}) => {
+    const cache_ref = React.useRef();
+    const list_ref = React.useRef();
+    const is_dynamic_height = !getRowSize;
+    const [scroll_top, setScrollTop] = React.useState(0);
+    const [is_loading, setLoading] = React.useState(true);
 
-class DataTable extends React.PureComponent {
-    constructor(props) {
-        super(props);
-        this.state = {
-            height: 200,
-            width: 200,
-            window_width: 1024,
-        };
-    }
+    React.useEffect(() => {
+        if (is_dynamic_height) {
+            cache_ref.current = new CellMeasurerCache({
+                fixedWidth: true,
+                keyMapper: row_index => {
+                    if (row_index < data_source.length) return keyMapper?.(data_source[row_index]) || row_index;
+                    return row_index;
+                },
+            });
+        }
+        setLoading(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    componentDidMount() {
-        this.setState({
-            height: this.props.custom_height || this.el_table_body.clientHeight,
-            width: this.props.custom_width || this.el_table_body.clientWidth,
-            window_width: window.innerWidth,
-        });
-    }
+    React.useEffect(() => {
+        if (is_dynamic_height) list_ref.current?.recomputeGridSize(0);
+    }, [data_source, is_dynamic_height]);
 
-    rowRenderer = ({
-        data,
-        index, // Index of row
-        style, // Style object to be applied to row (to position it);
-    }) => {
-        const { className, getRowAction, columns, preloaderCheck, id, getActionColumns, content_loader } = this.props;
-        const item = data[index];
+    const handleScroll = ev => {
+        setScrollTop(ev.target.scrollTop);
+        if (typeof onScroll === 'function') onScroll(ev);
+    };
+
+    const rowRenderer = ({ style, index, key, parent }) => {
+        const item = data_source[index];
         const action = getRowAction && getRowAction(item);
-        const contract_id = data[index].contract_id || data[index].id;
+        const contract_id = item.contract_id || item.id;
+        const row_key = keyMapper?.(item) || key;
 
         // If row content is complex, consider rendering a light-weight placeholder while scrolling.
-        const content = (
+        const getContent = ({ measure } = {}) => (
             <TableRow
                 className={className}
-                row_obj={item}
                 columns={columns}
+                content_loader={content_loader}
+                getActionColumns={getActionColumns}
                 id={contract_id}
                 key={id}
-                to={typeof action === 'string' ? action : undefined}
-                show_preloader={typeof preloaderCheck === 'function' ? preloaderCheck(item) : null}
+                measure={measure}
+                passthrough={passthrough}
                 replace={typeof action === 'object' ? action : undefined}
-                getActionColumns={getActionColumns}
-                content_loader={content_loader}
+                row_obj={item}
+                show_preloader={typeof preloaderCheck === 'function' ? preloaderCheck(item) : false}
+                to={typeof action === 'string' ? action : undefined}
+                is_dynamic_height={is_dynamic_height}
             />
         );
 
-        return <div style={style}>{content}</div>;
+        return is_dynamic_height ? (
+            <CellMeasurer cache={cache_ref.current} columnIndex={0} key={row_key} rowIndex={index} parent={parent}>
+                {({ measure }) => <div style={style}>{getContent({ measure })}</div>}
+            </CellMeasurer>
+        ) : (
+            <div key={row_key} style={style}>
+                {getContent()}
+            </div>
+        );
     };
 
-    render() {
-        const {
-            children,
-            className,
-            columns,
-            data_source,
-            footer,
-            getActionColumns,
-            getRowSize,
-            onScroll,
-            content_loader,
-        } = this.props;
-
-        const TableData = (
-            <React.Fragment>
-                <List
+    if (is_loading) {
+        return <div />;
+    }
+    return (
+        <div
+            className={classNames('table', {
+                [`${className}`]: className,
+                [`${className}__table`]: className,
+                [`${className}__content`]: className,
+            })}
+        >
+            <div className='table__head'>
+                <TableRow
                     className={className}
-                    height={this.state.height}
-                    itemCount={data_source.length}
-                    itemData={data_source}
-                    itemSize={getRowSize}
-                    width={this.state.width}
-                    outerElementType={ThemedScrollbarsWrapper}
-                >
-                    {this.rowRenderer}
-                </List>
-                {children}
-            </React.Fragment>
-        );
+                    columns={columns}
+                    content_loader={content_loader}
+                    getActionColumns={getActionColumns}
+                    is_header
+                />
+            </div>
+            <div className='table__body'>
+                <AutoSizer>
+                    {({ width, height }) => (
+                        <div
+                            className='dc-data-table'
+                            style={{
+                                height,
+                                width,
+                            }}
+                        >
+                            <ThemedScrollbars autoHide onScroll={handleScroll}>
+                                <List
+                                    autoHeight
+                                    className={className}
+                                    deferredMeasurementCache={cache_ref.current}
+                                    height={height}
+                                    overscanRowCount={1}
+                                    ref={ref => (list_ref.current = ref)}
+                                    rowCount={data_source.length}
+                                    rowHeight={is_dynamic_height ? cache_ref?.current.rowHeight : getRowSize}
+                                    rowRenderer={rowRenderer}
+                                    scrollingResetTimeInterval={0}
+                                    scrollTop={scroll_top}
+                                    width={width}
+                                />
+                            </ThemedScrollbars>
+                            {children}
+                        </div>
+                    )}
+                </AutoSizer>
+            </div>
 
-        return (
-            <div
-                className={classNames('table', {
-                    [`${className}`]: className,
-                    [`${className}__table`]: className,
-                    [`${className}__content`]: className,
-                })}
-            >
-                <div
-                    className='table__head'
-                    ref={el => {
-                        this.el_table_head = el;
-                    }}
-                >
+            {footer && (
+                <div className='table__foot'>
                     <TableRow
                         className={className}
                         columns={columns}
-                        is_header
-                        getActionColumns={getActionColumns}
                         content_loader={content_loader}
+                        getActionColumns={getActionColumns}
+                        is_footer
+                        row_obj={footer}
                     />
                 </div>
-                <div
-                    className='table__body'
-                    ref={el => {
-                        this.el_table_body = el;
-                    }}
-                    onScroll={onScroll}
-                >
-                    {TableData}
-                </div>
-
-                {footer && (
-                    <div className='table__foot'>
-                        <TableRow
-                            className={className}
-                            row_obj={footer}
-                            columns={columns}
-                            is_footer
-                            getActionColumns={getActionColumns}
-                            content_loader={content_loader}
-                        />
-                    </div>
-                )}
-            </div>
-        );
-    }
-}
+            )}
+        </div>
+    );
+};
 
 DataTable.propTypes = {
     children: PropTypes.oneOfType([PropTypes.node, PropTypes.arrayOf(PropTypes.node)]),
@@ -154,6 +170,7 @@ DataTable.propTypes = {
     getRowAction: PropTypes.func,
     getRowSize: PropTypes.func,
     onScroll: PropTypes.func,
+    passthrough: PropTypes.object,
 };
 
 export default DataTable;

@@ -19,7 +19,6 @@ export default class ChartStore {
 
     @observable symbol;
     @observable is_chart_loading;
-    @observable main_barrier = null;
     @observable chart_type;
     @observable granularity;
 
@@ -112,6 +111,23 @@ export default class ChartStore {
             return WS.activeSymbols();
         }
         return WS.storage.send(req);
+    };
+
+    getMarketsOrder = active_symbols => {
+        const synthetic_index = 'synthetic_index';
+
+        const has_synthetic_index = !!active_symbols.find(s => s.market === synthetic_index);
+        return active_symbols
+            .slice()
+            .sort((a, b) => (a.display_name < b.display_name ? -1 : 1))
+            .map(s => s.market)
+            .reduce(
+                (arr, market) => {
+                    if (arr.indexOf(market) === -1) arr.push(market);
+                    return arr;
+                },
+                has_synthetic_index ? [synthetic_index] : []
+            );
     };
     // #endregion
 }

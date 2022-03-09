@@ -1,24 +1,21 @@
 import { expect } from 'chai';
 import React from 'react';
-import { getAllowedLanguages } from '../language';
+import { getAllowedLanguages } from '@deriv/translations';
 
 describe('getAllowedLanguages', () => {
     it('It Returns the desired allowed languages', () => {
-        expect(getAllowedLanguages()).to.eql({
-            // TODO uncomment this part when the design is ready.
+        expect({
             EN: 'English',
-            // DE   : 'Deutsch',
-            // ES   : 'Español',
-            // FR   : 'Français',
-            // ID   : 'Indonesia',
-            // IT   : 'Italiano',
-            // PL   : 'Polish',
-            // PT   : 'Português',
-            // RU   : 'Русский',
-            // TH   : 'Thai',
-            // VI   : 'Tiếng Việt',
-            // ZH_CN: '简体中文',
-            // ZH_TW: '繁體中文',
-        });
+            ES: 'Español',
+            FR: 'Français',
+            ID: 'Indonesia',
+            IT: 'Italiano',
+            PL: 'Polish',
+            PT: 'Português',
+            RU: 'Русский',
+            VI: 'Tiếng Việt',
+            ZH_CN: '简体中文',
+            ZH_TW: '繁體中文',
+        }).to.include(getAllowedLanguages());
     });
 });

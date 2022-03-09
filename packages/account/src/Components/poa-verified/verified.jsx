@@ -1,26 +1,56 @@
 import React from 'react';
+import classNames from 'classnames';
+import { PropTypes } from 'prop-types';
 import { Icon } from '@deriv/components';
+import { PlatformContext } from '@deriv/shared';
 import { localize } from '@deriv/translations';
 import { PoiButton } from 'Components/poi-button/poi-button.jsx';
 import IconMessageContent from 'Components/icon-message-content';
 import { ContinueTradingButton } from 'Components/poa-continue-trading-button/continue-trading-button.jsx';
 
-export const Verified = ({ needs_poi, is_description_disabled = false }) => {
+export const Verified = ({ needs_poi, is_description_enabled = true }) => {
+    const { is_appstore } = React.useContext(PlatformContext);
+
     const message = localize('Your proof of address is verified');
     if (needs_poi) {
         return (
-            <IconMessageContent
-                message={message}
-                text={localize('To continue trading, you must also submit a proof of identity.')}
-                icon={<Icon icon='IcPoaVerified' size={128} />}
+            <div
+                className={classNames('account-management__container', {
+                    'account-management__container-dashboard': is_appstore,
+                })}
             >
-                <PoiButton />
-            </IconMessageContent>
+                <IconMessageContent
+                    message={message}
+                    text={localize('To continue trading, you must also submit a proof of identity.')}
+                    icon={<Icon icon='IcPoaVerified' size={128} />}
+                    className={is_appstore && 'account-management-dashboard'}
+                >
+                    <PoiButton />
+                </IconMessageContent>
+            </div>
         );
     }
     return (
-        <IconMessageContent message={message} icon={<Icon icon='IcPoaVerified' size={128} />}>
-            {!is_description_disabled && <ContinueTradingButton />}
-        </IconMessageContent>
+        <div
+            className={classNames('account-management__container', {
+                'account-management__container-dashboard': is_appstore,
+            })}
+        >
+            <IconMessageContent
+                message={message}
+                icon={
+                    <Icon icon='IcPoaVerified' size={128} className={is_appstore && 'account-management-dashboard'} />
+                }
+            >
+                {!is_description_enabled && <ContinueTradingButton />}
+            </IconMessageContent>
+        </div>
     );
 };
+
+Verified.PropTypes = {
+    needs_poi: PropTypes.bool,
+    is_description_disabled: PropTypes.bool,
+};
+
+export default Verified;

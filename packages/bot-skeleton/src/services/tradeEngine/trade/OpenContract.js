@@ -1,46 +1,43 @@
 import { getRoundedNumber } from '@deriv/shared';
 import { sell, openContractReceived } from './state/actions';
-import { contractStatus, contractSettled, contract as broadcastContract } from '../utils/broadcast';
+import { contractStatus, contract as broadcastContract } from '../utils/broadcast';
 import { doUntilDone } from '../utils/helpers';
-
-const AFTER_FINISH_TIMEOUT = 5;
+import DBotStore from '../../../scratch/dbot-store';
 
 export default Engine =>
     class OpenContract extends Engine {
         observeOpenContract() {
-            this.listen('proposal_open_contract', r => {
-                const contract = r.proposal_open_contract;
+            this.api.onMessage().subscribe(({ data }) => {
+                if (data.msg_type === 'proposal_open_contract') {
+                    const contract = data.proposal_open_contract;
 
-                if (!this.expectedContractId(contract.contract_id)) {
-                    return;
-                }
-
-                this.setContractFlags(contract);
-
-                this.data.contract = contract;
-
-                broadcastContract({ accountID: this.accountInfo.loginid, ...contract });
-
-                if (this.isSold) {
-                    contractSettled(contract);
-                    this.contractId = '';
-                    this.updateTotals(contract);
-                    contractStatus({
-                        id: 'contract.sold',
-                        data: contract.transaction_ids.sell,
-                        contract,
-                    });
-                    if (this.afterPromise) {
-                        this.afterPromise();
+                    if (!contract && !this.expectedContractId(contract?.contract_id)) {
+                        return;
                     }
 
-                    this.store.dispatch(sell());
+                    this.setContractFlags(contract);
 
-                    this.cancelSubscriptionTimeout();
-                } else {
-                    this.store.dispatch(openContractReceived());
-                    if (!this.isExpired) {
-                        this.resetSubscriptionTimeout();
+                    this.data.contract = contract;
+
+                    broadcastContract({ accountID: this.accountInfo.loginid, ...contract });
+
+                    if (this.isSold) {
+                        this.contractId = '';
+                        clearTimeout(this.transaction_recovery_timeout);
+                        this.updateTotals(contract);
+                        contractStatus({
+                            id: 'contract.sold',
+                            data: contract.transaction_ids.sell,
+                            contract,
+                        });
+
+                        if (this.afterPromise) {
+                            this.afterPromise();
+                        }
+
+                        this.store.dispatch(sell());
+                    } else {
+                        this.store.dispatch(openContractReceived());
                     }
                 }
             });
@@ -52,46 +49,30 @@ export default Engine =>
             });
         }
 
-        subscribeToOpenContract(contractId = this.contractId) {
-            if (this.contractId !== contractId) {
-                this.resetSubscriptionTimeout();
-            }
-            this.contractId = contractId;
-
-            doUntilDone(() => this.api.subscribeToOpenContract(contractId)).then(r => {
-                ({
-                    proposal_open_contract: { id: this.openContractId },
-                } = r);
-            });
-        }
-
-        resetSubscriptionTimeout(timeout = AFTER_FINISH_TIMEOUT) {
-            this.cancelSubscriptionTimeout();
-            this.subscriptionTimeout = setInterval(() => {
-                this.subscribeToOpenContract();
-                this.resetSubscriptionTimeout(timeout);
-            }, timeout * 1000);
-        }
-
-        cancelSubscriptionTimeout() {
-            clearTimeout(this.subscriptionTimeout);
+        subscribeToOpenContract(contract_id = this.contractId) {
+            this.contractId = contract_id;
+            doUntilDone(() => this.api.send({ proposal_open_contract: 1, contract_id, subscribe: 1 }))
+                .then(data => {
+                    const { populateConfig } = DBotStore.instance;
+                    populateConfig(data.proposal_open_contract);
+                    this.openContractId = data.proposal_open_contract.id;
+                })
+                .catch(error => {
+                    if (error.error.code !== 'AlreadySubscribed') {
+                        doUntilDone(() => this.api.send({ proposal_open_contract: 1, contract_id, subscribe: 1 })).then(
+                            response => (this.openContractId = response.proposal_open_contract.id)
+                        );
+                    }
+                });
         }
 
         setContractFlags(contract) {
-            const {
-                is_expired: isExpired,
-                is_valid_to_sell: isValidToSell,
-                is_sold: isSold,
-                entry_tick: entryTick,
-            } = contract;
+            const { is_expired, is_valid_to_sell, is_sold, entry_tick } = contract;
 
-            this.isSold = Boolean(isSold);
-
-            this.isSellAvailable = !this.isSold && Boolean(isValidToSell);
-
-            this.isExpired = Boolean(isExpired);
-
-            this.hasEntryTick = Boolean(entryTick);
+            this.isSold = Boolean(is_sold);
+            this.isSellAvailable = !this.isSold && Boolean(is_valid_to_sell);
+            this.isExpired = Boolean(is_expired);
+            this.hasEntryTick = Boolean(entry_tick);
         }
 
         expectedContractId(contractId) {

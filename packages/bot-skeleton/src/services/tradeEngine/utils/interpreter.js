@@ -1,16 +1,16 @@
 import { cloneThorough } from '@deriv/shared';
-import JSInterpreter from 'js-interpreter';
+import JSInterpreter from '@deriv/js-interpreter';
 import { createScope } from './cliTools';
 import Interface from '../Interface';
 import { unrecoverable_errors } from '../../../constants/messages';
 import { observer as globalObserver } from '../../../utils/observer';
 
-JSInterpreter.prototype.takeStateSnapshot = function() {
+JSInterpreter.prototype.takeStateSnapshot = function () {
     const newStateStack = cloneThorough(this.stateStack, undefined, undefined, undefined, true);
     return newStateStack;
 };
 
-JSInterpreter.prototype.restoreStateSnapshot = function(snapshot) {
+JSInterpreter.prototype.restoreStateSnapshot = function (snapshot) {
     this.stateStack = cloneThorough(snapshot, undefined, undefined, undefined, true);
     this.global = this.stateStack[0].scope.object || this.stateStack[0].scope;
     this.initFunc_(this, this.global);
@@ -22,7 +22,7 @@ const shouldRestartOnError = (bot, errorName = '') =>
     !unrecoverable_errors.includes(errorName) && botInitialized(bot) && bot.tradeEngine.options.shouldRestartOnError;
 
 const shouldStopOnError = (bot, errorName = '') => {
-    const stopErrors = ['SellNotAvailableCustom'];
+    const stopErrors = ['SellNotAvailableCustom', 'ContractCreationFailure'];
     if (stopErrors.includes(errorName) && botInitialized(bot)) {
         return true;
     }
@@ -116,15 +116,19 @@ export default class Interpreter {
                 if (this.stopped) {
                     return;
                 }
-
-                if (shouldStopOnError(this.bot, e.name)) {
+                // DBot handles 'InvalidToken' internally
+                if (e.code === 'InvalidToken') {
+                    globalObserver.emit('client.invalid_token');
+                    return;
+                }
+                if (shouldStopOnError(this.bot, e?.code)) {
                     globalObserver.emit('ui.log.error', e.message);
                     globalObserver.emit('bot.click_stop');
                     return;
                 }
 
                 this.is_error_triggered = true;
-                if (!shouldRestartOnError(this.bot, e.name) || !botStarted(this.bot)) {
+                if (!shouldRestartOnError(this.bot, e.code) || !botStarted(this.bot)) {
                     reject(e);
                     return;
                 }
@@ -161,12 +165,11 @@ export default class Interpreter {
     }
 
     terminateSession() {
-        const { socket } = this.$scope.api;
-
-        if (socket.readyState === 0) {
-            socket.addEventListener('open', () => this.$scope.api.disconnect());
-        } else if (socket.readyState === 1) {
-            this.$scope.api.disconnect();
+        const { connection } = this.$scope.api;
+        if (connection.readyState === 0) {
+            connection.addEventListener('open', () => connection.close());
+        } else if (connection.readyState === 1) {
+            connection.close();
         }
 
         this.stopped = true;
@@ -176,7 +179,17 @@ export default class Interpreter {
     }
 
     stop() {
-        if (this.bot.tradeEngine.isSold === false && !this.is_error_triggered) {
+        const global_timeouts = globalObserver.getState('global_timeouts') ?? [];
+        const is_timeouts_cancellable = Object.keys(global_timeouts).every(
+            timeout => global_timeouts[timeout].is_cancellable
+        );
+
+        if (!this.bot.tradeEngine.contractId && is_timeouts_cancellable) {
+            // When user is rate limited, allow them to stop the bot immediately
+            // granted there is no active contract.
+            global_timeouts.forEach(timeout => clearTimeout(global_timeouts[timeout]));
+            this.terminateSession();
+        } else if (this.bot.tradeEngine.isSold === false && !this.is_error_triggered) {
             globalObserver.register('contract.status', contractStatus => {
                 if (contractStatus.id === 'contract.sold') {
                     this.terminateSession();
@@ -204,7 +217,10 @@ export default class Interpreter {
                     callback(interpreter.nativeToPseudo(rv));
                     this.loop();
                 })
-                .catch(e => this.$scope.observer.emit('Error', e));
+                .catch(e => {
+                    // e.error for errors get from API, e for code errors
+                    this.$scope.observer.emit('Error', e.error || e);
+                });
         };
 
         // TODO: This is a workaround, create issue on original repo, once fixed
@@ -219,3 +235,5 @@ export default class Interpreter {
         return !this.stopped;
     }
 }
+
+export const createInterpreter = () => new Interpreter();

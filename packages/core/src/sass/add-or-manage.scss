@@ -1,15 +1,74 @@
 .add-or-manage {
     flex-direction: row; /* fix for Safari */
     flex-wrap: wrap;
+    height: 100%;
 
-    form {
+    .dc-tabs__content {
+        display: flex;
         flex-direction: column;
+        padding-bottom: 7rem;
     }
+    .dc-tabs__list--header-fit-content {
+        margin: 0 auto;
+    }
+    .account-wizard--disabled {
+        &-message p:first-child {
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: $BORDER_RADIUS;
+        }
+    }
+    .currency-selector {
+        &__radio-group--is-header {
+            font-size: 1.6rem;
+            font-weight: bold;
+            font-stretch: normal;
+            font-style: normal;
+            line-height: 1.5;
+            letter-spacing: normal;
+            color: var(--text-general);
+            text-align: center;
+        }
+        &__description {
+            display: none;
+        }
+        &__deposit-warn {
+            width: 78%;
+            margin: calc(3% - 1rem) auto;
+            padding: 10px;
+            background-color: var(--general-section-1);
+            border-radius: $BORDER_RADIUS;
+        }
+    }
+    &__with-margin--is-header {
+        font-size: 1.6rem;
+        font-weight: bold;
+        font-stretch: normal;
+        font-style: normal;
+        line-height: 1.5;
+        letter-spacing: normal;
+        color: var(--text-general);
+        text-align: center;
+    }
+    @include desktop {
+        .currency-selector__radio-group--with-margin {
+            margin-bottom: 3rem;
+            margin-left: auto;
+            margin-right: auto;
+            width: 768px;
+        }
+        .dc-form-submit-button--absolute {
+            position: fixed;
+            padding: 1.6rem;
+            width: 100%;
+            right: 0;
+        }
+    }
+
     @include mobile {
-        flex-direction: column;
         flex-wrap: unset;
-        overflow-x: hidden;
-        overflow-y: auto;
 
         & .account-wizard__btn-area {
             & .dc-btn,
@@ -18,13 +77,59 @@
                 margin: 0 1.6rem;
             }
         }
+        .currency-selector__radio-group--with-margin {
+            margin-bottom: 3rem;
+        }
         & .change-currency {
-            margin-bottom: 1.6rem;
+            .currency-list__items {
+                margin-bottom: 12rem;
+            }
+            .dc-form-submit-button--relative {
+                position: fixed;
+                background-color: unset;
+                right: 0;
+            }
+        }
+        .account-wizard--disabled {
+            &-message p:first-child {
+                width: 100%;
+                height: 7.5rem;
+                margin-top: 0.6rem;
+                padding: 0 1rem;
+            }
+            .currency-list__items {
+                margin-top: 1.6rem;
+            }
         }
         & .dc-form-submit-button {
-            position: relative;
-            border: none;
+            position: fixed;
+            padding: 15px;
+            height: 72px;
+            bottom: 0;
+            width: 100%;
+            background-color: var(--fill-normal);
+            border: 2px solid var(--general-section-1);
+
+            button {
+                width: 100%;
+            }
         }
+    }
+}
+
+.dc-modal__container {
+    &_real-account-signup-modal--success .status-dialog {
+        &__close {
+            display: none;
+        }
+        &__footer {
+            margin: 0;
+            flex-direction: row;
+            justify-content: center;
+        }
+    }
+    &--risk-message .status-dialog {
+        width: auto;
     }
 }
 
@@ -35,10 +140,20 @@
     flex-direction: column;
     position: relative;
     flex-grow: 1;
-    width: min-content;
-    padding: 2rem 2rem 1rem;
+    padding: 2.4rem;
 
-    &__icon-area {
+    &__close {
+        position: absolute;
+        cursor: pointer;
+        top: 1.8rem;
+        right: 1.8rem;
+
+        @include mobile {
+            // margin: 0.8rem;
+        }
+    }
+
+    &__header {
         display: flex;
         align-items: center;
         width: auto;
@@ -47,7 +162,7 @@
 
         .bottom-right-overlay {
             position: absolute;
-            bottom: 0;
+            bottom: 2rem;
             right: 0;
             width: 3rem;
             height: 3rem;
@@ -73,90 +188,166 @@
         &--xlarge,
         &--large {
             width: auto;
+            flex-grow: 1;
 
             .bottom-right-overlay {
-                width: 48px;
-                height: 48px;
+                width: 4.8rem;
+                height: 4.8rem;
                 right: -1rem;
                 bottom: -1rem;
 
                 @include mobile {
-                    max-width: 36px;
+                    max-width: 3.6rem;
                     height: auto;
                 }
+            }
+
+            @include mobile {
+                flex-grow: 0;
             }
         }
         &--xlarge {
             svg:first-child {
-                width: 128px;
-                height: 128px;
+                width: 12.8rem;
+                height: 12.8rem;
             }
         }
         &--large {
             svg.inline-icon {
-                width: 120px;
-                height: 120px;
+                width: 12rem;
+                height: 12rem;
             }
         }
         &--center {
             justify-content: center;
             width: auto;
+            margin-top: 3rem;
+        }
+        &--set-currency {
+            svg:first-child {
+                margin: 0 auto;
+            }
+            .bottom-right-overlay {
+                bottom: 2rem;
+            }
         }
     }
-    &__body-area {
+    &__body {
         flex-grow: 1;
 
-        h2 {
-            @include typeface(--title-center-bold-black);
-            margin-top: 2rem;
-            color: var(--text-general);
+        &--no-grow {
+            flex-grow: 0;
+            margin-bottom: 3.2rem;
+        }
+    }
+    &__message {
+        &-header {
+            margin: 1rem 0 0.8rem;
 
             @include mobile {
                 line-height: 24px;
-                margin: 1.6rem 0 0.8rem;
+                margin-top: 1.6rem;
             }
         }
-        p {
-            @include typeface(--paragraph-left-normal-black);
-            padding: 1rem;
-            text-align: center;
-            text-transform: none;
-            color: var(--text-general);
+        &-text {
+            padding: 0.2rem 0;
 
             @include mobile {
                 padding: 0 1rem;
+                line-height: 2rem;
             }
-        }
-        &--no-grow {
-            flex-grow: 0;
         }
     }
-    &__btn-area {
-        margin: 2rem 0 1rem;
-        width: 100%;
+    &__footer {
         display: flex;
-        justify-content: center;
+        width: 100%;
+        flex-direction: column;
+        margin: 1.4rem 0 0;
 
         & .dc-btn {
-            margin: 0 0.5rem;
+            margin: 0.4rem;
             height: 4rem;
+            border-width: 2px;
 
             @include mobile {
-                width: 100%;
-                margin: 0 0.8rem;
+                margin: 0.4rem 1.4rem;
             }
         }
-        @include mobile {
-            height: 88px;
-            align-items: center;
-            border-top: 2px solid var(--border-disabled);
-            margin: 0;
-        }
+    }
+
+    @include desktop {
+        width: 44rem;
+        min-height: 35.2rem;
     }
     @include mobile {
         justify-content: flex-start;
         width: 100%;
         height: 100%;
-        padding: 2rem 0 0;
+        padding: 6rem 0 0;
     }
+}
+
+.finished-add-currency {
+    &__dialog {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        position: relative;
+        flex-grow: 1;
+        padding: 0rem 2.4rem 2.4rem;
+    }
+
+    &__footer {
+        display: flex;
+        width: 100%;
+        flex-direction: row;
+        margin: 1.4rem 0 0;
+        justify-content: center;
+
+        & .dc-btn {
+            margin: 0.4rem;
+            height: 4rem;
+            border-width: 2px;
+            text-align: center;
+
+            @include mobile {
+                &:first-child {
+                    margin: 0.4rem 1.4rem;
+                }
+                &:last-child {
+                    margin: 0.4rem 1.4rem 0.4rem 0;
+                }
+            }
+        }
+    }
+
+    @include desktop {
+        width: 38.4rem;
+        min-height: 30rem;
+    }
+    @include mobile {
+        justify-content: flex-start;
+        width: 100%;
+        height: 100%;
+        padding: 6rem 0 0;
+    }
+
+    &__close {
+        display: block;
+        cursor: pointer;
+        padding: 0.6rem 0.8rem 0;
+        margin: 1.2rem 1.6rem 0 auto;
+
+        @include mobile {
+            margin: 0.8rem;
+        }
+    }
+}
+
+.dc-mobile-dialog {
+    height: 100%;
+}
+
+.dc-mobile-dialog--enter-done .dc-mobile-dialog__content {
+    transform: unset;
 }

@@ -1,7 +1,6 @@
 import throttle from 'lodash.throttle';
 import { action, computed, observable, reaction } from 'mobx';
 import { createTransformer } from 'mobx-utils';
-import { WS } from 'Services/ws-methods';
 import {
     isEmptyObject,
     isEnded,
@@ -10,6 +9,7 @@ import {
     isMultiplierContract,
     getCurrentTick,
     getDisplayStatus,
+    WS,
 } from '@deriv/shared';
 import { formatPortfolioPosition } from './Helpers/format-response';
 import { contractCancelled, contractSold } from './Helpers/portfolio-notifications';
@@ -31,8 +31,8 @@ export default class PortfolioStore extends BaseStore {
     @observable.shallow active_positions = [];
 
     @action.bound
-    initializePortfolio = async () => {
-        if (this.is_subscribed_to_poc) {
+    async initializePortfolio() {
+        if (this.has_subscribed_to_poc_and_transaction) {
             this.clearTable();
         }
         this.is_loading = true;
@@ -40,8 +40,8 @@ export default class PortfolioStore extends BaseStore {
         WS.portfolio().then(this.portfolioHandler);
         WS.subscribeProposalOpenContract(null, this.proposalOpenContractQueueHandler);
         WS.subscribeTransaction(this.transactionHandler);
-        this.is_subscribed_to_poc = true;
-    };
+        this.has_subscribed_to_poc_and_transaction = true;
+    }
 
     @action.bound
     clearTable() {
@@ -50,8 +50,10 @@ export default class PortfolioStore extends BaseStore {
         this.is_loading = false;
         this.error = '';
         this.updatePositions();
-        WS.forgetAll('proposal_open_contract', 'transaction');
-        this.is_subscribed_to_poc = false;
+        if (this.has_subscribed_to_poc_and_transaction) {
+            WS.forgetAll('proposal_open_contract', 'transaction');
+        }
+        this.has_subscribed_to_poc_and_transaction = false;
     }
 
     @action.bound
@@ -111,9 +113,14 @@ export default class PortfolioStore extends BaseStore {
             // Sometimes when we sell a contract, we don't get `proposal_open_contract` message with exit information and status as `sold`.
             // This is to make sure that we get `proposal_open_contract` message with exit information and status as `sold`.
             const subscriber = WS.subscribeProposalOpenContract(contract_id, poc => {
-                this.updateContractTradeStore(poc);
-                this.updateContractReplayStore(poc);
-                this.populateResultDetails(poc);
+                if (poc.error) {
+                    // Settles the contract based on transaction response when POC response is throwing error.
+                    this.populateResultDetailsFromTransaction(response);
+                } else {
+                    this.updateContractTradeStore(poc);
+                    this.updateContractReplayStore(poc);
+                    this.populateResultDetails(poc);
+                }
                 subscriber.unsubscribe();
             });
         }
@@ -222,6 +229,8 @@ export default class PortfolioStore extends BaseStore {
     @action.bound
     onClickCancel(contract_id) {
         const i = this.getPositionIndexById(contract_id);
+        if (this.positions[i].is_sell_requested) return;
+
         this.positions[i].is_sell_requested = true;
         if (contract_id) {
             WS.cancelContract(contract_id).then(response => {
@@ -231,7 +240,7 @@ export default class PortfolioStore extends BaseStore {
                         ...response.error,
                     });
                 } else {
-                    this.root_store.ui.addNotificationMessage(contractCancelled());
+                    this.root_store.notifications.addNotificationMessage(contractCancelled());
                 }
             });
         }
@@ -240,6 +249,8 @@ export default class PortfolioStore extends BaseStore {
     @action.bound
     onClickSell(contract_id) {
         const i = this.getPositionIndexById(contract_id);
+        if (this.positions[i].is_sell_requested) return;
+
         const { bid_price } = this.positions[i].contract_info;
         this.positions[i].is_sell_requested = true;
         if (contract_id && typeof bid_price === 'number') {
@@ -262,18 +273,42 @@ export default class PortfolioStore extends BaseStore {
                 });
             }
         } else if (!response.error && response.sell) {
-            const i = this.getPositionIndexById(response.sell.contract_id);
-            this.positions[i].is_sell_requested = false;
             // update contract store sell info after sell
             this.root_store.modules.contract_trade.sell_info = {
                 sell_price: response.sell.sold_for,
                 transaction_id: response.sell.transaction_id,
             };
-            this.root_store.ui.addNotificationMessage(
+            this.root_store.notifications.addNotificationMessage(
                 contractSold(this.root_store.client.currency, response.sell.sold_for)
             );
         }
     }
+
+    @action.bound
+    populateResultDetailsFromTransaction = response => {
+        const transaction_response = response.transaction;
+        const { contract_id, amount } = transaction_response;
+        const i = this.getPositionIndexById(contract_id);
+        const position = this.positions[i];
+
+        if (!position) {
+            return;
+        }
+        const contract_info = { ...position.contract_info, is_sold: 1, is_expired: 1, status: 'complete' };
+
+        position.contract_info = contract_info;
+        position.is_valid_to_sell = false;
+        position.result = amount > contract_info.buy_price ? 'won' : 'lost';
+        position.status = 'complete';
+        position.is_sold = 1;
+        position.is_loading = false;
+
+        contract_info.exit_tick_time = contract_info.date_expiry;
+        contract_info.sell_price = String(amount);
+        contract_info.profit = amount - contract_info.buy_price;
+
+        this.updatePositions();
+    };
 
     @action.bound
     populateResultDetails = response => {
@@ -311,7 +346,7 @@ export default class PortfolioStore extends BaseStore {
     populateContractUpdate({ contract_update }, contract_id) {
         const position = this.getPositionById(contract_id);
         if (position) {
-            Object.assign(position.contract_update, contract_update);
+            Object.assign(position.contract_update || {}, contract_update);
             this.updatePositions();
         }
     }
@@ -358,7 +393,6 @@ export default class PortfolioStore extends BaseStore {
 
     preSwitchAccountListener() {
         this.clearTable();
-
         return Promise.resolve();
     }
 
@@ -379,7 +413,7 @@ export default class PortfolioStore extends BaseStore {
         this.onSwitchAccount(this.accountSwitcherListener);
         this.onNetworkStatusChange(this.networkStatusChangeListener);
         this.onLogout(this.logoutListener);
-        if (this.positions.length === 0) {
+        if (this.positions.length === 0 && !this.has_subscribed_to_poc_and_transaction) {
             // TODO: Optimise the way is_logged_in changes are detected for "logging in" and "already logged on" states
             if (this.root_store.client.is_logged_in) {
                 this.initializePortfolio();
@@ -401,6 +435,7 @@ export default class PortfolioStore extends BaseStore {
         this.disposePreSwitchAccount();
         this.disposeSwitchAccount();
         this.disposeLogout();
+        this.clearTable();
     }
 
     getPositionIndexById(contract_id) {

@@ -1,11 +1,15 @@
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import React from 'react';
-import { Button, Icon, Modal } from '@deriv/components';
+import { Button, Icon, Modal, Text } from '@deriv/components';
 import { localize, Localize } from '@deriv/translations';
 
+const Checkmark = ({ className }) => (
+    <Icon className={className} icon='IcCheckmarkCircle' custom_color='var(--status-success)' size={24} />
+);
+
 const SuccessDialog = ({
-    classNameMessage = undefined,
+    classNameMessage = '',
     has_cancel,
     has_submit,
     icon,
@@ -20,17 +24,12 @@ const SuccessDialog = ({
     toggleModal,
     title,
     has_close_icon,
-    width = undefined,
+    width = '',
+    is_medium_button,
 }) => {
-    const MainIcon = () => icon || null;
-
-    const Checkmark = ({ className }) => (
-        <Icon className={className} icon='IcCheckmarkCircle' custom_color='var(--status-success)' size={24} />
-    );
-
     return (
         <Modal
-            className='mt5-success-dialog'
+            className='cfd-success-dialog'
             is_open={is_open}
             toggleModal={toggleModal}
             has_close_icon={has_close_icon}
@@ -45,13 +44,13 @@ const SuccessDialog = ({
                         'success-change__icon-area--xlarge': icon_size === 'xlarge',
                     })}
                 >
-                    <MainIcon />
+                    {icon}
                     <Checkmark className='bottom-right-overlay' />
                 </div>
                 {!heading && (
-                    <h2 className='dc-modal-header__title'>
+                    <Text as='h2' weight='bold' size='s' className='dc-modal-header__title'>
                         <Localize i18n_default_text='Success!' />
-                    </h2>
+                    </Text>
                 )}
                 {heading && heading}
                 {React.isValidElement(message) && message}
@@ -64,10 +63,18 @@ const SuccessDialog = ({
                         has_effect
                         text={text_cancel || localize('Maybe later')}
                         secondary
-                        large
+                        {...(is_medium_button ? { medium: true } : { large: true })}
                     />
                 )}
-                {has_submit && <Button has_effect onClick={onSubmit} text={text_submit} primary large />}
+                {has_submit && (
+                    <Button
+                        has_effect
+                        onClick={onSubmit}
+                        text={text_submit}
+                        primary
+                        {...(is_medium_button ? { medium: true } : { large: true })}
+                    />
+                )}
             </Modal.Footer>
         </Modal>
     );
@@ -87,10 +94,14 @@ SuccessDialog.propTypes = {
     icon: PropTypes.object,
     icon_size: PropTypes.string,
     icon_type: PropTypes.string,
+    is_medium_button: PropTypes.bool,
     message: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
     onCancel: PropTypes.func,
     onSubmit: PropTypes.func,
+    text_cancel: PropTypes.string,
     text_submit: PropTypes.string,
+    title: PropTypes.string,
+    width: PropTypes.string,
 };
 
 export default SuccessDialog;

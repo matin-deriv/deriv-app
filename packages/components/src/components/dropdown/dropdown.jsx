@@ -1,56 +1,52 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { CSSTransition } from 'react-transition-group';
-import { mobileOSDetect } from '@deriv/shared';
+import { mobileOSDetect, getPosition } from '@deriv/shared';
 import { listPropType, findNextFocusableNode, findPreviousFocusableNode } from './dropdown';
 import Items from './items.jsx';
-import NativeSelect from './native-select.jsx';
 import DisplayText from './display-text.jsx';
-import { useOnClickOutside } from '../../hooks';
+import Text from '../text/text.jsx';
+import { useBlockScroll, useOnClickOutside } from '../../hooks';
 import ThemedScrollbars from '../themed-scrollbars/themed-scrollbars.jsx';
-import Icon from '../icon';
+import Icon from '../icon/icon.jsx';
 
-const Dropdown = ({
-    className,
-    classNameDisplay,
-    classNameItems,
-    classNameLabel,
-    disabled,
-    error,
-    handleBlur,
-    has_symbol,
-    hint,
-    label,
-    list,
-    name,
-    no_border,
-    is_alignment_top,
-    is_alignment_left,
-    is_align_text_left,
-    is_large,
-    is_nativepicker,
-    is_nativepicker_visible,
-    placeholder,
-    onChange,
-    value,
-}) => {
-    const dropdown_ref = React.useRef();
-    const list_ref = React.useRef();
-    const native_select_ref = React.useRef();
-    const wrapper_ref = React.useRef();
-    const nodes = React.useRef(new Map());
+const DropdownList = React.forwardRef((props, list_ref) => {
+    const {
+        classNameItems,
+        classNameLabel,
+        has_symbol,
+        handleSelect,
+        initial_offset,
+        is_list_visible,
+        is_alignment_left,
+        is_alignment_top,
+        is_align_text_left,
+        is_large,
+        list,
+        nodes,
+        onKeyPressed,
+        portal_id,
+        suffix_icon,
+        value,
+        parent_ref,
+    } = props;
 
-    const [is_list_visible, setIsListVisible] = React.useState(!!is_nativepicker_visible);
-    const [list_dimensions, setListDimensions] = React.useState([0, 0]);
-    const initial_render = React.useRef(true);
+    const [list_dimensions, setListDimensions] = React.useState([initial_offset, 0]);
+    const [style, setStyle] = React.useState({});
+    const is_portal = !!portal_id;
 
-    const onClickOutSide = () => {
-        if (typeof handleBlur === 'function') handleBlur({ target: { name } });
-        setIsListVisible(false);
-    };
-
-    useOnClickOutside(wrapper_ref, onClickOutSide, () => is_list_visible);
+    React.useEffect(() => {
+        if (parent_ref.current && portal_id && is_list_visible) {
+            const position_style = getPosition({
+                preferred_alignment: is_alignment_top ? 'top' : 'bottom',
+                parent_el: parent_ref.current,
+                child_el: list_ref.current,
+            });
+            setStyle(position_style.style);
+        }
+    }, [is_list_visible, is_alignment_top, portal_id, list.length, parent_ref, list_ref]);
 
     /**
      * Calculate the offset for the dropdown list based on its width
@@ -74,6 +70,156 @@ const Dropdown = ({
         };
     };
 
+    const dropdownListClassName = () => {
+        return classNames('dc-dropdown__list', {
+            'dc-dropdown__list--left': is_alignment_left && !is_portal,
+            'dc-dropdown__list--top': is_alignment_top && !is_portal,
+            'dc-dropdown__list--portal': is_portal,
+        });
+    };
+
+    const listClassNames = () => {
+        return classNames('dc-list', {
+            'dc-list--left': is_alignment_left,
+            'dc-list--large': is_large,
+            'dc-list--has-suffix-icon': suffix_icon,
+        });
+    };
+
+    const transitionClassName = () => {
+        return {
+            enter: `dc-dropdown__list--enter${is_alignment_left ? ' dc-dropdown__list--left--enter' : ''}`,
+            enterDone: `dc-dropdown__list--enter-done${
+                is_alignment_left ? ' dc-dropdown__list--left--enter-done' : ''
+            }`,
+            exit: `dc-dropdown__list--exit${is_alignment_left ? ' dc-dropdown__list--left--exit' : ''}`,
+        };
+    };
+
+    // Upon render via css transition group, we use this as a callback to set the width/height of the dropdown list in the state
+    const setListDimension = () =>
+        setListDimensions([initial_offset || list_ref.current.offsetWidth, list_ref.current.offsetHeight]);
+
+    const getDropDownAlignment = () => {
+        if (is_portal) return null;
+
+        if (is_alignment_left) return computed_offset_left();
+        else if (is_alignment_top) return computed_offset_top();
+
+        return null;
+    };
+
+    const el_dropdown_list = (
+        <CSSTransition
+            in={is_list_visible}
+            timeout={100}
+            classNames={transitionClassName()}
+            onEntered={setListDimension}
+            unmountOnExit
+        >
+            <div style={style} className={dropdownListClassName()}>
+                <div
+                    className={listClassNames()}
+                    style={getDropDownAlignment()}
+                    aria-expanded={is_list_visible}
+                    role='list'
+                    ref={list_ref}
+                >
+                    <ThemedScrollbars height={list_dimensions[1] || '200px'}>
+                        {Array.isArray(list) ? (
+                            <Items
+                                onKeyPressed={onKeyPressed}
+                                className={classNameItems}
+                                handleSelect={handleSelect}
+                                has_symbol={has_symbol}
+                                items={list}
+                                name={name}
+                                is_align_text_left={is_align_text_left}
+                                value={value}
+                                nodes={nodes.current}
+                            />
+                        ) : (
+                            Object.keys(list).map((key, idx) => (
+                                <React.Fragment key={key}>
+                                    <div className={classNames('dc-list__label', classNameLabel)}>{key}</div>
+                                    <Items
+                                        onKeyPressed={onKeyPressed}
+                                        className={classNameItems}
+                                        handleSelect={handleSelect}
+                                        has_symbol={has_symbol}
+                                        items={list[key]}
+                                        name={name}
+                                        is_align_text_left={is_align_text_left}
+                                        value={value}
+                                        nodes={nodes.current}
+                                    />
+                                    {idx !== Object.keys(list).length - 1 && <span className='dc-list__separator' />}
+                                </React.Fragment>
+                            ))
+                        )}
+                    </ThemedScrollbars>
+                </div>
+            </div>
+        </CSSTransition>
+    );
+
+    if (portal_id) {
+        return ReactDOM.createPortal(el_dropdown_list, document.getElementById(portal_id));
+    }
+
+    return el_dropdown_list;
+});
+
+DropdownList.displayName = 'DropdownList';
+
+const Dropdown = ({
+    className,
+    classNameDisplay,
+    classNameHint,
+    classNameItems,
+    classNameLabel,
+    disabled,
+    error,
+    handleBlur,
+    has_symbol,
+    hint,
+    initial_offset = 0,
+    is_alignment_top,
+    is_alignment_left,
+    is_align_text_left,
+    is_large,
+    is_nativepicker,
+    is_nativepicker_visible,
+    label,
+    list,
+    list_portal_id,
+    name,
+    no_border,
+    placeholder,
+    suffix_icon,
+    onChange,
+    value,
+}) => {
+    const dropdown_ref = React.useRef();
+    const native_select_ref = React.useRef();
+    const wrapper_ref = React.useRef();
+    const nodes = React.useRef(new Map());
+    const list_ref = React.useRef();
+    const is_portal = !!list_portal_id;
+
+    const [is_list_visible, setIsListVisible] = React.useState(!!is_nativepicker_visible);
+    const initial_render = React.useRef(true);
+    useBlockScroll(list_portal_id && is_list_visible ? dropdown_ref : false);
+
+    const onClickOutSide = event => {
+        if (is_portal && list_ref.current?.contains(event.target)) return;
+
+        if (typeof handleBlur === 'function') handleBlur({ target: { name } });
+        setIsListVisible(false);
+    };
+
+    useOnClickOutside(wrapper_ref, onClickOutSide, () => is_list_visible);
+
     const isSingleOption = () => {
         return Array.isArray(list)
             ? list.length < 2
@@ -88,6 +234,7 @@ const Dropdown = ({
             'dc-dropdown--show': is_list_visible,
             'dc-dropdown--disabled': isSingleOption() || disabled,
             'dc-dropdown--error': error,
+            'dc-dropdown--has-suffix-icon': suffix_icon,
         });
     };
 
@@ -100,39 +247,15 @@ const Dropdown = ({
         });
     };
 
-    const dropdownListClassName = () => {
-        return classNames('dc-dropdown__list', {
-            'dc-dropdown__list--left': is_alignment_left,
-            'dc-dropdown__list--top': is_alignment_top,
-        });
-    };
-
-    const listClassNames = () => {
-        return classNames('dc-list', {
-            'dc-list--left': is_alignment_left,
-            'dc-list--large': is_large,
-        });
-    };
-
-    const transitionClassName = () => {
-        return {
-            enter: `dc-dropdown__list--enter${is_alignment_left ? ' dc-dropdown__list--left--enter' : ''}`,
-            enterDone: `dc-dropdown__list--enter-done${
-                is_alignment_left ? ' dc-dropdown__list--left--enter-done' : ''
-            }`,
-            exit: `dc-dropdown__list--exit${is_alignment_left ? ' dc-dropdown__list--left--exit' : ''}`,
-        };
-    };
-
     React.useEffect(() => {
         if (is_nativepicker && !is_nativepicker_visible && is_list_visible) {
             setIsListVisible(false);
         }
-    }, [is_nativepicker, is_nativepicker_visible]);
+    }, [is_nativepicker, is_nativepicker_visible, is_list_visible]);
 
     React.useEffect(() => {
         if (!initial_render.current && !is_list_visible && value) dropdown_ref.current.focus();
-    }, [is_list_visible]);
+    }, [is_list_visible, value]);
 
     const handleSelect = item => {
         if (item.value !== value) onChange({ target: { name, value: item.value } });
@@ -223,30 +346,6 @@ const Dropdown = ({
         }
     };
 
-    // Upon render via css transition group, we use this as a callback to set the width/height of the dropdown list in the state
-    const setListDimension = () => setListDimensions([list_ref.current.offsetWidth, list_ref.current.offsetHeight]);
-
-    const getDropDownAlignment = () => {
-        if (is_alignment_left) return computed_offset_left();
-        else if (is_alignment_top) return computed_offset_top();
-
-        return null;
-    };
-
-    const DropdownItems = ({ items }) => (
-        <Items
-            onKeyPressed={onKeyPressed}
-            className={classNameItems}
-            handleSelect={handleSelect}
-            has_symbol={has_symbol}
-            items={items}
-            name={name}
-            is_align_text_left={is_align_text_left}
-            value={value}
-            nodes={nodes.current}
-        />
-    );
-
     React.useEffect(() => {
         if (initial_render.current) {
             initial_render.current = false;
@@ -264,7 +363,11 @@ const Dropdown = ({
                 value={value || 0}
             />
             <div ref={wrapper_ref} className={containerClassName()}>
-                <div className='dc-dropdown__container'>
+                <div
+                    className={classNames('dc-dropdown__container', {
+                        'dc-dropdown__container--suffix-icon': suffix_icon,
+                    })}
+                >
                     {label && (
                         <span
                             className={classNames('dc-dropdown__label', {
@@ -276,23 +379,28 @@ const Dropdown = ({
                     )}
                     <div
                         className={dropdownDisplayClassName()}
+                        data-testid='dti_dropdown_display'
                         tabIndex={isSingleOption() ? '-1' : '0'}
                         onClick={handleVisibility}
                         onKeyDown={onKeyPressed}
                         id='dropdown-display'
                         ref={dropdown_ref}
                     >
+                        {!!suffix_icon && <Icon className='suffix-icon' icon={suffix_icon} size={16} fill />}
                         <DisplayText
+                            className={classNames({
+                                'dc-dropdown__display--has-suffix-icon-text': suffix_icon,
+                            })}
                             has_symbol={has_symbol}
                             name={name}
+                            is_align_text_left={is_align_text_left}
                             is_title={is_list_visible}
                             placeholder={placeholder}
                             value={value || 0}
                             list={list}
-                            is_align_text_left={is_align_text_left}
                         />
                     </div>
-                    {!isSingleOption() && (
+                    {!(isSingleOption() || !!suffix_icon) && (
                         <Icon
                             icon={is_alignment_left ? 'IcChevronLeft' : 'IcChevronDown'}
                             className={classNames('dc-dropdown__select-arrow', {
@@ -302,54 +410,42 @@ const Dropdown = ({
                             })}
                         />
                     )}
-                    {error && <p className='dc-field--error'>{error}</p>}
-                    {is_nativepicker ? (
-                        <NativeSelect
-                            ref={native_select_ref}
-                            name={name}
-                            value={value}
-                            list={list}
-                            onChange={onChange}
-                        />
-                    ) : (
-                        <CSSTransition
-                            in={is_list_visible}
-                            timeout={100}
-                            classNames={transitionClassName()}
-                            onEntered={setListDimension}
-                            unmountOnExit
-                        >
-                            <div className={dropdownListClassName()}>
-                                <div
-                                    className={listClassNames()}
-                                    ref={list_ref}
-                                    style={getDropDownAlignment()}
-                                    aria-expanded={is_list_visible}
-                                    role='list'
-                                >
-                                    <ThemedScrollbars height={list_dimensions[1] || '200px'}>
-                                        {Array.isArray(list) ? (
-                                            <DropdownItems items={list} />
-                                        ) : (
-                                            Object.keys(list).map((key, idx) => (
-                                                <React.Fragment key={key}>
-                                                    <div className={classNames('dc-list__label', classNameLabel)}>
-                                                        {key}
-                                                    </div>
-                                                    <DropdownItems items={list[key]} />
-                                                    {idx !== Object.keys(list).length - 1 && (
-                                                        <span className='dc-list__separator' />
-                                                    )}
-                                                </React.Fragment>
-                                            ))
-                                        )}
-                                    </ThemedScrollbars>
-                                </div>
-                            </div>
-                        </CSSTransition>
+                    {error && (
+                        <Text as='p' size='xxs' color='loss-danger' className='dc-field--error'>
+                            {error}
+                        </Text>
                     )}
+                    <DropdownList
+                        ref={list_ref}
+                        classNameItems={classNameItems}
+                        classNameLabel={classNameLabel}
+                        portal_id={list_portal_id}
+                        has_symbol={has_symbol}
+                        handleSelect={handleSelect}
+                        is_alignment_left={is_alignment_left}
+                        is_alignment_top={is_alignment_top}
+                        is_align_text_left={is_align_text_left}
+                        is_large={is_large}
+                        is_list_visible={is_list_visible}
+                        initial_offset={initial_offset}
+                        list={list}
+                        nodes={nodes}
+                        onKeyPressed={onKeyPressed}
+                        value={value}
+                        parent_ref={dropdown_ref}
+                        suffix_icon={suffix_icon}
+                    />
                 </div>
-                {!error && hint && <p className='dc-dropdown__hint'>{hint}</p>}
+                {!error && hint && (
+                    <Text
+                        as='p'
+                        color='less-prominent'
+                        size='xxs'
+                        className={classNames('dc-dropdown__hint', classNameHint)}
+                    >
+                        {hint}
+                    </Text>
+                )}
             </div>
         </React.Fragment>
     );
@@ -360,8 +456,11 @@ Dropdown.propTypes = {
     classNameDisplay: PropTypes.string,
     classNameItems: PropTypes.string,
     classNameLabel: PropTypes.string,
+    classNameHint: PropTypes.string,
     disabled: PropTypes.bool,
+    list_portal_id: PropTypes.string,
     has_symbol: PropTypes.bool,
+    initial_offset: PropTypes.number,
     is_alignment_left: PropTypes.bool,
     is_large: PropTypes.bool,
     is_nativepicker: PropTypes.bool,
@@ -373,6 +472,7 @@ Dropdown.propTypes = {
     no_border: PropTypes.bool,
     onChange: PropTypes.func,
     placeholder: PropTypes.string,
+    suffix_icon: PropTypes.string,
     value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 };
 

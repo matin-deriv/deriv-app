@@ -1,8 +1,7 @@
 import React from 'react';
 import { Field, Form, Formik } from 'formik';
-import { Button, Input, Checkbox } from '@deriv/components';
-import { getAppId, getSocketURL, PlatformContext } from '@deriv/shared';
-import { connect } from 'Stores/connect';
+import { Button, Input, Checkbox, Text } from '@deriv/components';
+import { getDebugServiceWorker, getAppId, getSocketURL, PlatformContext } from '@deriv/shared';
 // eslint-disable-next-line import/extensions
 
 const InputField = props => {
@@ -25,15 +24,15 @@ const InputField = props => {
 };
 
 // doesn't need localization as it's for internal use
-const Endpoint = ({ is_eu_enabled, toggleIsEuEnabled }) => {
+const Endpoint = () => {
     const platform_store = React.useContext(PlatformContext);
     return (
         <Formik
             initialValues={{
                 app_id: getAppId(),
                 server: getSocketURL(),
-                is_eu_enabled,
-                is_deriv_crypto_enabled: platform_store.is_deriv_crypto,
+                is_appstore_enabled: platform_store.is_appstore,
+                is_debug_service_worker_enabled: !!getDebugServiceWorker(),
             }}
             validate={values => {
                 const errors = {};
@@ -54,26 +53,24 @@ const Endpoint = ({ is_eu_enabled, toggleIsEuEnabled }) => {
             onSubmit={values => {
                 localStorage.setItem('config.app_id', values.app_id);
                 localStorage.setItem('config.server_url', values.server);
-                localStorage.setItem('is_eu_enabled', values.is_eu_enabled);
-                localStorage.setItem(platform_store.DERIV_CRYPTO_KEY, values.is_deriv_crypto_enabled);
-                toggleIsEuEnabled(values.is_eu_enabled);
-                platform_store.setDerivCrypto(values.is_deriv_crypto_enabled);
+                localStorage.setItem(platform_store.DERIV_APPSTORE_KEY, values.is_appstore_enabled);
+                localStorage.setItem('debug_service_worker', values.is_debug_service_worker_enabled ? 1 : 0);
+                platform_store.setIsAppStore(values.is_appstore_enabled);
                 location.reload();
             }}
         >
             {({ errors, isSubmitting, touched, values, handleChange, setFieldTouched }) => (
                 <Form style={{ width: '30vw', minWidth: '300px', margin: '20vh auto' }}>
-                    <h1
+                    <div
                         style={{
-                            fontWeight: 'bold',
-                            color: 'var(--text-prominent)',
                             marginBottom: '1.6rem',
-                            fontSize: 'var(--text-size-s)',
-                            lineHeight: 'normal',
                         }}
                     >
-                        Change API endpoint
-                    </h1>
+                        <Text as='h1' weight='bold' color='prominent'>
+                            Change API endpoint
+                        </Text>
+                    </div>
+
                     <InputField name='server' label='Server' hint='e.g. frontend.binaryws.com' />
                     <InputField
                         name='app_id'
@@ -92,31 +89,31 @@ const Endpoint = ({ is_eu_enabled, toggleIsEuEnabled }) => {
                             </React.Fragment>
                         }
                     />
-                    <Field name='is_eu_enabled'>
+                    <Field name='is_appstore_enabled'>
                         {({ field }) => (
                             <div style={{ marginTop: '4.5rem', marginBottom: '1.6rem' }}>
                                 <Checkbox
                                     {...field}
-                                    label='Enable EU'
-                                    value={values.is_eu_enabled}
+                                    label='Enable Appstore'
+                                    value={values.is_appstore_enabled}
                                     onChange={e => {
                                         handleChange(e);
-                                        setFieldTouched('is_eu_enabled', true);
+                                        setFieldTouched('is_appstore_enabled', true);
                                     }}
                                 />
                             </div>
                         )}
                     </Field>
-                    <Field name='is_deriv_crypto_enabled'>
+                    <Field name='is_debug_service_worker_enabled'>
                         {({ field }) => (
                             <div style={{ marginTop: '4.5rem', marginBottom: '1.6rem' }}>
                                 <Checkbox
                                     {...field}
-                                    label='Enable Deriv Crypto'
-                                    value={values.is_deriv_crypto_enabled}
+                                    label='Enable Service Worker registration for this URL'
+                                    value={values.is_debug_service_worker_enabled}
                                     onChange={e => {
                                         handleChange(e);
-                                        setFieldTouched('is_deriv_crypto_enabled', true);
+                                        setFieldTouched('is_debug_service_worker_enabled', true);
                                     }}
                                 />
                             </div>
@@ -128,8 +125,8 @@ const Endpoint = ({ is_eu_enabled, toggleIsEuEnabled }) => {
                             !!(
                                 (!touched.server &&
                                     !touched.app_id &&
-                                    !touched.is_eu_enabled &&
-                                    !touched.is_deriv_crypto_enabled) ||
+                                    !touched.is_appstore_enabled &&
+                                    !touched.is_debug_service_worker_enabled) ||
                                 !values.server ||
                                 !values.app_id ||
                                 errors.server ||
@@ -146,8 +143,6 @@ const Endpoint = ({ is_eu_enabled, toggleIsEuEnabled }) => {
                         onClick={() => {
                             localStorage.removeItem('config.app_id');
                             localStorage.removeItem('config.server_url');
-                            localStorage.removeItem('is_eu_enabled');
-                            localStorage.removeItem(platform_store.DERIV_CRYPTO_KEY);
                             location.reload();
                         }}
                         text='Reset to original settings'
@@ -159,7 +154,4 @@ const Endpoint = ({ is_eu_enabled, toggleIsEuEnabled }) => {
     );
 };
 
-export default connect(({ ui }) => ({
-    is_eu_enabled: ui.is_eu_enabled,
-    toggleIsEuEnabled: ui.toggleIsEuEnabled,
-}))(Endpoint);
+export default Endpoint;

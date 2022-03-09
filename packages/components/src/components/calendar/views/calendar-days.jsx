@@ -15,6 +15,7 @@ import {
 import { CommonPropTypes } from './types';
 import Popover from '../../popover';
 import { getDaysOfTheWeek, week_headers_abbr } from '../helpers';
+import Text from '../../text';
 
 const getDays = ({
     calendar_date,
@@ -22,7 +23,6 @@ const getDays = ({
     has_range_selection,
     hide_others,
     events,
-    hovered_date,
     isPeriodDisabled,
     start_date,
     selected_date,
@@ -30,6 +30,7 @@ const getDays = ({
     disabled_days,
     onMouseOver,
     onMouseLeave,
+    should_show_today = true,
 }) => {
     // adjust Calendar week by 1 day so that Calendar week starts on Monday
     // change to zero to set Calendar week to start on Sunday
@@ -48,9 +49,7 @@ const getDays = ({
             : toMoment(selected_date).startOf('day');
 
     // populate previous months' dates
-    const end_of_prev_month = subMonths(moment_cur_date, 1)
-        .endOf('month')
-        .day();
+    const end_of_prev_month = subMonths(moment_cur_date, 1).endOf('month').day();
     for (let i = end_of_prev_month; i > 0; i--) {
         dates.push(subDays(moment_month_start, i).format(date_format));
     }
@@ -59,9 +58,7 @@ const getDays = ({
         dates.push(moment_cur_date.clone().format(date_format.replace('DD', padLeft(idx, 2, '0'))));
     }
     // populate next months' dates
-    const start_of_next_month = addMonths(moment_cur_date, 1)
-        .startOf('month')
-        .day();
+    const start_of_next_month = addMonths(moment_cur_date, 1).startOf('month').day();
     if (start_of_next_month - day_offset > 0 || dates.length <= 28) {
         // if start_of_next_month doesn't falls on Monday, append rest of the week
         for (let i = 1; i <= 7 - start_of_next_month + day_offset; i++) {
@@ -76,20 +73,18 @@ const getDays = ({
 
     dates.map(date => {
         const moment_date = toMoment(date).startOf('day');
-        const moment_hovered = toMoment(hovered_date).startOf('day');
         const is_active = selected_date && moment_date.isSame(moment_selected);
         const is_today = moment_date.isSame(moment_today, 'day');
 
         const calendar_events = events.filter(event =>
             // filter by date or day of the week
-            event.dates.find(d => d === date || getDaysOfTheWeek(d) === toMoment(date).day())
+            event.dates.find(d => getDaysOfTheWeek(d) === toMoment(date).day())
         );
         const has_events = !!calendar_events.length;
         const is_closes_early = calendar_events.map(event => !!event.descrip.match(/Closes early|Opens late/))[0];
         const message = calendar_events.map(event => event.descrip)[0] || '';
         const duration_from_today = daysFromTodayTo(date);
         const is_between = moment_date.isBetween(moment_today, moment_selected);
-        const is_between_hover = moment_date.isBetween(moment_today, moment_hovered);
         const is_before_min_or_after_max_date = isPeriodDisabled(moment_date, 'day');
         const is_disabled =
             // check if date is before min_date or after_max_date
@@ -109,13 +104,12 @@ const getDays = ({
                 key={date}
                 className={classNames('dc-calendar__cell', {
                     'dc-calendar__cell--active': is_active,
-                    'dc-calendar__cell--today': is_today,
+                    'dc-calendar__cell--today': should_show_today && is_today,
                     'dc-calendar__cell--active-duration': is_active && has_range_selection && !is_today,
                     'dc-calendar__cell--today-duration': is_today && has_range_selection,
                     'dc-calendar__cell--disabled': is_disabled,
                     'dc-calendar__cell--is-hidden': is_other_month && hide_others,
                     'dc-calendar__cell--other': is_other_month,
-                    'dc-calendar__cell--between-hover': is_between_hover && has_range_selection,
                     'dc-calendar__cell--between': is_between && has_range_selection,
                 })}
                 onClick={is_disabled ? undefined : e => updateSelected(e, 'day')}
@@ -130,7 +124,10 @@ const getDays = ({
                         classNameTarget='dc-calendar__cell-tooltip'
                         classNameTargetIcon='dc-calendar__cell-tooltip-icon'
                         icon='dot'
+                        is_bubble_hover_enabled
                         message={message}
+                        zIndex={9999}
+                        should_show_cursor
                     />
                 )}
                 {moment_date.date()}
@@ -147,9 +144,9 @@ const Days = props => {
     return (
         <div className='dc-calendar__body dc-calendar__body--date'>
             {Object.keys(week_headers_abbr).map((item, idx) => (
-                <span key={idx} className='dc-calendar__text dc-calendar__text--bold'>
+                <Text size='xxs' align='center' weight='bold' key={idx}>
                     {week_headers_abbr[item]}
-                </span>
+                </Text>
             ))}
             {days}
         </div>
@@ -171,7 +168,6 @@ Days.propTypes = {
             descrip: PropTypes.string,
         })
     ),
-    hovered_date: PropTypes.string,
     onMouseLeave: PropTypes.func,
     onMouseOver: PropTypes.func,
     start_date: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),

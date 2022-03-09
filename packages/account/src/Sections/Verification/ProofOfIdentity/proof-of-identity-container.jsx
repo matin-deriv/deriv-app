@@ -1,149 +1,185 @@
-import * as Cookies from 'js-cookie';
 import React from 'react';
-import { Loading } from '@deriv/components';
-import { localize } from '@deriv/translations';
-import Unverified from 'Components/poi-unverified';
+import { Button, Loading } from '@deriv/components';
+import { getPlatformRedirect, WS } from '@deriv/shared';
+import { Localize } from '@deriv/translations';
+import { useHistory } from 'react-router';
+import DemoMessage from 'Components/demo-message';
 import ErrorMessage from 'Components/error-component';
+import NotRequired from 'Components/poi-not-required';
+import Unsupported from 'Components/poi-unsupported';
+import Verified from 'Components/poi-verified';
+import Limited from 'Components/poi-limited';
+import Expired from 'Components/poi-expired';
+import UploadComplete from 'Components/poi-upload-complete';
+import POISubmission from './proof-of-identity-submission.jsx';
 import Onfido from './onfido.jsx';
-import { getIdentityStatus } from './proof-of-identity';
+import IdvContainer from './idv.jsx';
+import { identity_status_codes, service_code } from './proof-of-identity-utils';
+import { populateVerificationStatus } from '../Helpers/verification';
 
-class ProofOfIdentityContainer extends React.Component {
-    is_mounted = false;
-    state = {
-        is_loading: true,
-        api_error: false,
-        status: '',
-    };
+const ProofOfIdentityContainer = ({
+    account_status,
+    app_routing_history,
+    fetchResidenceList,
+    height,
+    is_from_external,
+    is_switching,
+    is_virtual,
+    onStateChange,
+    refreshNotifications,
+    routeBackInApp,
+    should_allow_authentication,
+}) => {
+    const history = useHistory();
+    const [api_error, setAPIError] = React.useState();
+    const [has_require_submission, setHasRequireSubmission] = React.useState(false);
+    const [residence_list, setResidenceList] = React.useState();
+    const [is_status_loading, setStatusLoading] = React.useState(true);
 
-    getOnfidoServiceToken = () =>
-        new Promise((resolve) => {
-            const onfido_cookie_name = 'onfido_token';
-            const onfido_cookie = Cookies.get(onfido_cookie_name);
+    const from_platform = getPlatformRedirect(app_routing_history);
+    const should_show_redirect_btn = from_platform.name === 'P2P';
 
-            if (!onfido_cookie) {
-                this.props
-                    .serviceToken({
-                        service_token: 1,
-                        service: 'onfido',
-                    })
-                    .then((response) => {
-                        if (response.error) {
-                            resolve({ error: response.error });
-                            return;
-                        }
+    const routeBackTo = redirect_route => routeBackInApp(history, [redirect_route]);
+    const handleRequireSubmission = () => setHasRequireSubmission(true);
 
-                        const { token } = response.service_token.onfido;
-                        const in_90_minutes = 1 / 16;
-                        Cookies.set(onfido_cookie_name, token, {
-                            expires: in_90_minutes,
-                            secure: true,
-                            sameSite: 'strict',
-                        });
-                        resolve(token);
-                    });
-            } else {
-                resolve(onfido_cookie);
-            }
-        });
-
-    handleComplete = () => {
-        this.props
-            .notificationEvent({
-                notification_event: 1,
-                category: 'authentication',
-                event: 'poi_documents_uploaded',
-            })
-            .then((response) => {
-                if (response.error) {
-                    this.setState({ api_error: true });
+    React.useEffect(() => {
+        // only re-mount logic when switching is done
+        if (!is_switching) {
+            WS.authorized.getAccountStatus().then(response_account_status => {
+                if (response_account_status.error) {
+                    setAPIError(response_account_status.error);
+                    setStatusLoading(false);
                     return;
                 }
-                this.setState({ status: 'pending' });
-                // TODO: clean all of this up by simplifying the manually toggled notifications functions
-                this.props.removeNotificationMessage({ key: 'authenticate' });
-                this.props.removeNotificationByKey({ key: 'authenticate' });
-                this.props.removeNotificationMessage({ key: 'needs_poi' });
-                this.props.removeNotificationByKey({ key: 'needs_poi' });
-                this.props.removeNotificationMessage({ key: 'poi_expired' });
-                this.props.removeNotificationByKey({ key: 'poi_expired' });
-                if (this.state.needs_poa) this.props.addNotificationByKey('needs_poa');
-                if (this.props.onStateChange) this.props.onStateChange({ status: 'pending' });
-            });
-    };
 
-    componentDidMount() {
-        // TODO: Find a better solution for handling no-op instead of using is_mounted flags
-        this.is_mounted = true;
-        this.props.getAccountStatus().then((response) => {
-            const { get_account_status } = response;
-            this.getOnfidoServiceToken().then((onfido_service_token) => {
-                // TODO: handle error for onfido_service_token.error.code === 'MissingPersonalDetails'
-
-                const { document, identity, needs_verification } = get_account_status.authentication;
-                const has_poa = !(document && document.status === 'none');
-                const needs_poa = needs_verification.length && needs_verification.includes('document');
-                const onfido_unsupported = !identity.services.onfido.is_country_supported;
-                const status = getIdentityStatus(identity, onfido_unsupported);
-                const unwelcome = get_account_status.status.some((account_status) => account_status === 'unwelcome');
-                const allow_document_upload = get_account_status.status.some(
-                    (account_status) => account_status === 'allow_document_upload'
-                );
-                const documents_supported = identity.services.onfido.documents_supported;
-                if (this.is_mounted) {
-                    this.setState({
-                        is_loading: false,
-                        has_poa,
-                        needs_poa,
-                        status,
-                        onfido_service_token,
-                        unwelcome,
-                        documents_supported,
-                        allow_document_upload,
-                    });
-                    this.props.refreshNotifications();
-                    if (this.props.onStateChange) this.props.onStateChange({ status });
-                }
+                fetchResidenceList().then(response_residence_list => {
+                    if (response_residence_list.error) {
+                        setAPIError(response_residence_list.error);
+                    } else {
+                        setResidenceList(response_residence_list.residence_list);
+                    }
+                    setStatusLoading(false);
+                });
             });
-        });
+        }
+    }, [fetchResidenceList, is_switching]);
+
+    if (is_status_loading || is_switching) {
+        return <Loading is_fullscreen={false} />;
+    } else if (is_virtual) {
+        return <DemoMessage />;
+    } else if (api_error) {
+        return <ErrorMessage error_message={api_error?.message || api_error} />;
     }
 
-    componentWillUnmount() {
-        this.is_mounted = false;
+    const verification_status = populateVerificationStatus(account_status);
+    const {
+        idv,
+        allow_poi_resubmission,
+        has_attempted_idv,
+        identity_last_attempt,
+        identity_status,
+        is_age_verified,
+        is_idv_disallowed,
+        manual,
+        needs_poa,
+        onfido,
+    } = verification_status;
+
+    if (!should_allow_authentication && !is_age_verified) {
+        return <NotRequired />;
     }
 
-    render() {
-        const {
-            documents_supported,
-            is_loading,
-            status,
-            onfido_service_token,
-            has_poa,
-            api_error,
-            unwelcome,
-            allow_document_upload,
-        } = this.state;
+    const redirect_button = should_show_redirect_btn && (
+        <Button primary className='proof-of-identity__redirect' onClick={() => routeBackTo(from_platform.route)}>
+            <Localize i18n_default_text='Back to {{platform_name}}' values={{ platform_name: from_platform.name }} />
+        </Button>
+    );
 
-        if (api_error)
-            return (
-                <ErrorMessage
-                    error_message={localize('Sorry, there was a connection error. Please try again later.')}
-                />
-            );
-        if (is_loading) return <Loading is_fullscreen={false} className='account___intial-loader' />;
-        if (unwelcome && !allow_document_upload) return <Unverified />; // CS manually mark the account as unwelcome / suspends the account
-
+    if (identity_status === identity_status_codes.none || has_require_submission || allow_poi_resubmission) {
         return (
-            <Onfido
-                documents_supported={documents_supported}
-                status={status}
-                onfido_service_token={onfido_service_token}
-                has_poa={has_poa}
-                height={this.props.height ?? null}
-                handleComplete={this.handleComplete}
-                redirect_button={this.props.redirect_button}
+            <POISubmission
+                allow_poi_resubmission={allow_poi_resubmission}
+                has_attempted_idv={has_attempted_idv}
+                has_require_submission={has_require_submission}
+                height={height ?? null}
+                identity_last_attempt={identity_last_attempt}
+                idv={idv}
+                is_from_external={!!is_from_external}
+                is_idv_disallowed={is_idv_disallowed}
+                manual={manual}
+                needs_poa={needs_poa}
+                onfido={onfido}
+                onStateChange={onStateChange}
+                redirect_button={redirect_button}
+                refreshNotifications={refreshNotifications}
+                residence_list={residence_list}
             />
         );
+    } else if (
+        !identity_last_attempt ||
+        // Prioritise verified status from back office. How we know this is if there is mismatch between current statuses (Should be refactored)
+        (identity_status === 'verified' && identity_status !== identity_last_attempt.status)
+    ) {
+        switch (identity_status) {
+            case identity_status_codes.pending:
+                return (
+                    <UploadComplete
+                        is_from_external={is_from_external}
+                        needs_poa={needs_poa}
+                        redirect_button={redirect_button}
+                    />
+                );
+            case identity_status_codes.verified:
+                return (
+                    <Verified
+                        is_from_external={is_from_external}
+                        needs_poa={needs_poa}
+                        redirect_button={redirect_button}
+                    />
+                );
+            case identity_status_codes.expired:
+                return (
+                    <Expired
+                        is_from_external={is_from_external}
+                        redirect_button={redirect_button}
+                        handleRequireSubmission={handleRequireSubmission}
+                    />
+                );
+            case identity_status_codes.rejected:
+            case identity_status_codes.suspected:
+                return <Limited handleRequireSubmission={handleRequireSubmission} />;
+            default:
+                break;
+        }
     }
-}
+
+    switch (identity_last_attempt.service) {
+        case service_code.idv:
+            return (
+                <IdvContainer
+                    handleRequireSubmission={handleRequireSubmission}
+                    idv={idv}
+                    is_from_external={!!is_from_external}
+                    needs_poa={needs_poa}
+                    redirect_button={redirect_button}
+                />
+            );
+        case service_code.onfido:
+            return (
+                <Onfido
+                    handleRequireSubmission={handleRequireSubmission}
+                    is_from_external={!!is_from_external}
+                    needs_poa={needs_poa}
+                    onfido={onfido}
+                    redirect_button={redirect_button}
+                />
+            );
+        case service_code.manual:
+            return <Unsupported manual={manual} />;
+        default:
+            return null;
+    }
+};
 
 export default ProofOfIdentityContainer;

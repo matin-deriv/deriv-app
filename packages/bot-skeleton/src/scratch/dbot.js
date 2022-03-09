@@ -1,14 +1,14 @@
 import { localize } from '@deriv/translations';
 import './blockly';
-import { hasAllRequiredBlocks, updateDisabledBlocks } from './utils';
+import { hasAllRequiredBlocks, isAllRequiredBlocksEnabled, updateDisabledBlocks } from './utils';
 import main_xml from './xml/main.xml';
-import toolbox_xml from './xml/toolbox.xml';
 import DBotStore from './dbot-store';
-import { getSavedWorkspaces } from '../utils/local-storage';
+import { save_types } from '../constants';
 import { config } from '../constants/config';
+import { getSavedWorkspaces, saveWorkspaceToRecent } from '../utils/local-storage';
+import { observer as globalObserver } from '../utils/observer';
 import ApiHelpers from '../services/api/api-helpers';
 import Interpreter from '../services/tradeEngine/utils/interpreter';
-import { observer as globalObserver } from '../utils/observer';
 
 class DBot {
     constructor() {
@@ -21,6 +21,7 @@ class DBot {
      * Initialises the workspace and mounts it to a container element (app_contents).
      */
     async initWorkspace(public_path, store, api_helpers_store, is_mobile) {
+        const recent_files = await getSavedWorkspaces();
         return new Promise((resolve, reject) => {
             __webpack_public_path__ = public_path; // eslint-disable-line no-global-assign
             ApiHelpers.setInstance(api_helpers_store);
@@ -34,26 +35,34 @@ class DBot {
                     if (is_mobile) {
                         workspaceScale = 0.7;
                     } else {
-                        const scratch_div_width = document.getElementById('scratch_div').offsetWidth;
+                        const scratch_div_width = document.getElementById('scratch_div')?.offsetWidth;
                         const zoom_scale = scratch_div_width / window_width / 1.5;
                         workspaceScale = zoom_scale;
                     }
                 }
                 const el_scratch_div = document.getElementById('scratch_div');
+                if (!el_scratch_div) {
+                    return;
+                }
                 this.workspace = Blockly.inject(el_scratch_div, {
                     grid: { spacing: 40, length: 11, colour: '#f3f3f3' },
                     media: `${__webpack_public_path__}media/`,
-                    toolbox: toolbox_xml,
                     trashcan: !is_mobile,
                     zoom: { wheel: true, startScale: workspaceScale },
+                    scrollbars: true,
                 });
 
-                this.workspace.cached_xml = { main: main_xml, toolbox: toolbox_xml };
-                Blockly.derivWorkspace = this.workspace;
+                this.workspace.cached_xml = { main: main_xml };
+                this.workspace.save_workspace_interval = setInterval(async () => {
+                    // Periodically save the workspace.
+                    await saveWorkspaceToRecent(Blockly.Xml.workspaceToDom(this.workspace), save_types.UNSAVED);
+                }, 10000);
 
                 this.workspace.addChangeListener(this.valueInputLimitationsListener.bind(this));
                 this.workspace.addChangeListener(event => updateDisabledBlocks(this.workspace, event));
                 this.workspace.addChangeListener(event => this.workspace.dispatchBlockEventEffects(event));
+
+                Blockly.derivWorkspace = this.workspace;
 
                 this.addBeforeRunFunction(this.unselectBlocks.bind(this));
                 this.addBeforeRunFunction(this.disableStrayBlocks.bind(this));
@@ -61,20 +70,22 @@ class DBot {
                 this.addBeforeRunFunction(this.checkForRequiredBlocks.bind(this));
 
                 // Push main.xml to workspace and reset the undo stack.
-                const recent_files = getSavedWorkspaces();
                 this.workspace.current_strategy_id = Blockly.utils.genUid();
-                let strategy_to_load = main_xml;
+                Blockly.derivWorkspace.strategy_to_load = main_xml;
                 let file_name = config.default_file_name;
-                if (recent_files) {
+                if (recent_files && recent_files.length) {
                     const latest_file = recent_files[0];
-                    strategy_to_load = latest_file.xml;
+                    Blockly.derivWorkspace.strategy_to_load = latest_file.xml;
                     file_name = latest_file.name;
                     Blockly.derivWorkspace.current_strategy_id = latest_file.id;
                 }
 
                 const event_group = `dbot-load${Date.now()}`;
                 Blockly.Events.setGroup(event_group);
-                Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(strategy_to_load), this.workspace);
+                Blockly.Xml.domToWorkspace(
+                    Blockly.Xml.textToDom(Blockly.derivWorkspace.strategy_to_load),
+                    this.workspace
+                );
                 const { save_modal } = DBotStore.instance;
 
                 save_modal.updateBotName(file_name);
@@ -118,7 +129,7 @@ class DBot {
             const code = this.generateCode();
 
             if (this.interpreter !== null) {
-                this.stopBot();
+                this.interpreter = null;
             }
 
             this.interpreter = new Interpreter();
@@ -148,6 +159,7 @@ class DBot {
             var BinaryBotPrivateAfterPurchase;
             var BinaryBotPrivateLastTickTime;
             var BinaryBotPrivateTickAnalysisList = [];
+            var BinaryBotPrivateHasCalledTradeOptions = false;
             function BinaryBotPrivateRun(f, arg) {
                 if (f) return f(arg);
                 return false;
@@ -166,13 +178,17 @@ class DBot {
                 for (var BinaryBotPrivateI = 0; BinaryBotPrivateI < BinaryBotPrivateTickAnalysisList.length; BinaryBotPrivateI++) {
                     BinaryBotPrivateRun(BinaryBotPrivateTickAnalysisList[BinaryBotPrivateI]);
                 }
-            }   
+            }
             var BinaryBotPrivateLimitations = ${JSON.stringify(limitations)};
             ${Blockly.JavaScript.workspaceToCode(this.workspace)}
             BinaryBotPrivateRun(BinaryBotPrivateInit);
             while (true) {
                 BinaryBotPrivateTickAnalysis();
                 BinaryBotPrivateRun(BinaryBotPrivateStart);
+                if (!BinaryBotPrivateHasCalledTradeOptions) {
+                    sleep(1);
+                    continue;
+                }
                 while (watch('before')) {
                     BinaryBotPrivateTickAnalysis();
                     BinaryBotPrivateRun(BinaryBotPrivateBeforePurchase);
@@ -227,11 +243,21 @@ class DBot {
 
         top_blocks.forEach(block => {
             if (!block.isMainBlock() && !block.isIndependentBlock()) {
-                block.setDisabled(true);
+                this.disableBlocksRecursively(block);
             }
         });
 
         return true;
+    }
+
+    /**
+     * Disable blocks and their optional children.
+     */
+    disableBlocksRecursively(block) {
+        block.setDisabled(true);
+        if (block.nextConnection?.targetConnection) {
+            this.disableBlocksRecursively(block.nextConnection.targetConnection.sourceBlock_);
+        }
     }
 
     /**
@@ -278,22 +304,31 @@ class DBot {
     }
 
     unHighlightAllBlocks() {
-        this.workspace.getAllBlocks().forEach(block => block.setErrorHighlighted(false));
+        this.workspace?.getAllBlocks().forEach(block => block.setErrorHighlighted(false));
     }
 
     /**
      * Checks whether the workspace contains all required blocks before running the strategy.
      */
     checkForRequiredBlocks() {
+        let error;
+
         if (!hasAllRequiredBlocks(this.workspace)) {
-            const error = new Error(
+            error = new Error(
                 localize(
                     'One or more mandatory blocks are missing from your workspace. Please add the required block(s) and then try again.'
                 )
             );
+        } else if (!isAllRequiredBlocksEnabled(this.workspace)) {
+            error = new Error(
+                localize(
+                    'One or more mandatory blocks are disabled in your workspace. Please enable the required block(s) and then try again.'
+                )
+            );
+        }
 
+        if (error) {
             globalObserver.emit('Error', error);
-
             return false;
         }
 
@@ -439,6 +474,25 @@ class DBot {
                 }
             }
         });
+    }
+
+    /**
+     * Checks whether the workspace contains non-silent notification blocks. Returns array of names for audio files to be played.
+     */
+    getStrategySounds() {
+        const all_blocks = this.workspace.getAllBlocks();
+        const notify_blocks = all_blocks.filter(block => block.type === 'notify');
+        const strategy_sounds = [];
+
+        notify_blocks.forEach(block => {
+            const selected_sound = block.inputList[0].fieldRow[3].value_;
+
+            if (selected_sound !== 'silent') {
+                strategy_sounds.push(selected_sound);
+            }
+        });
+
+        return strategy_sounds;
     }
 
     static handleDragOver(event) {

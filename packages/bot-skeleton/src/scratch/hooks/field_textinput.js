@@ -1,7 +1,7 @@
 /**
  * Install this text field on a block.
  */
-Blockly.FieldTextInput.prototype.init = function() {
+Blockly.FieldTextInput.prototype.init = function () {
     if (this.fieldGroup_) {
         // Field has already been initialized once.
         return;
@@ -12,6 +12,8 @@ Blockly.FieldTextInput.prototype.init = function() {
     if (notInShadow) {
         this.className_ += ' blocklyEditableLabel';
     }
+
+    this.maxDisplayLength = 17;
 
     Blockly.FieldTextInput.superClass_.init.call(this);
 
@@ -24,7 +26,9 @@ Blockly.FieldTextInput.prototype.init = function() {
             y: 0,
             width: this.size_.width,
             height: this.size_.height,
-            fill: this.sourceBlock_.getColourTertiary(),
+            fill: this.sourceBlock_.getColourSecondary(),
+            stroke: this.sourceBlock_.getColourTertiary(),
+            'stroke-width': '0.3px',
         });
         this.fieldGroup_.insertBefore(this.box_, this.textElement_);
     }

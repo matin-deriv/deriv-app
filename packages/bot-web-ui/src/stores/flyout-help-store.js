@@ -1,5 +1,7 @@
 import { observable, action, runInAction } from 'mobx';
 import { config } from '@deriv/bot-skeleton';
+import { help_content_config } from 'Utils/help-content/help-content.config';
+import * as help_strings from 'Utils/help-content/help-strings';
 
 export default class FlyoutHelpStore {
     constructor(root_store) {
@@ -16,6 +18,7 @@ export default class FlyoutHelpStore {
 
     @observable block_node = null;
     @observable block_type = '';
+    @observable examples = [];
     @observable help_string = {};
     @observable title = '';
     @observable should_next_disable = false;
@@ -24,24 +27,23 @@ export default class FlyoutHelpStore {
 
     @action.bound
     setHelpContent = async block_node => {
-        const block_hw = Blockly.Block.getDimensions(block_node);
         const block_type = block_node.getAttribute('type');
         const title = Blockly.Blocks[block_type].meta().display_name;
         if (block_type !== '') {
             this.active_helper = block_type;
         }
-        const help_string_obj = await import(/* webpackChunkName: `[request]` */ '@deriv/bot-skeleton');
-        const start_scale = config.workspaces.flyoutWorkspacesStartScale;
-        block_node.setAttribute('width', block_hw.width * start_scale);
-        block_node.setAttribute('height', block_hw.height * start_scale);
 
         const { flyout } = this.root_store;
+        this.setExamples(block_type);
+        const example_blocks = this.examples.map(example => example.childNodes[0]);
+        setTimeout(() => flyout.setFlyoutWidth([block_node, ...example_blocks]), 50);
+
         runInAction(() => {
             flyout.is_help_content = true;
             this.block_node = block_node;
             this.block_type = block_type;
             this.title = title;
-            this.help_string = help_string_obj[block_type];
+            this.help_string = help_strings[block_type];
         });
 
         if (!flyout.is_search_flyout) {
@@ -52,12 +54,10 @@ export default class FlyoutHelpStore {
     getHelpContent = async block_node => {
         let block_content;
 
-        const help_string_obj = await import(/* webpackChunkName: `[request]` */ '@deriv/bot-skeleton');
-
         if (block_node) {
             const target_blocks = this.xml_list_group[block_node];
             const block_type = target_blocks[0].getAttribute('type');
-            block_content = help_string_obj[block_type];
+            block_content = help_strings[block_type];
         }
         return block_content;
     };
@@ -79,22 +79,19 @@ export default class FlyoutHelpStore {
 
     @action.bound
     onBackClick() {
-        // eslint-disable-next-line no-underscore-dangle
-        const toolbox = Blockly.derivWorkspace.toolbox_;
-        const { toolbar, flyout } = this.root_store;
+        const { toolbox, flyout } = this.root_store;
 
         if (flyout.is_search_flyout) {
             const search = document.getElementsByName('search')[0].value;
-
-            toolbar.onSearch({ search });
+            toolbox.onSearch({ search });
         } else {
-            toolbox.refreshCategory();
+            flyout.refreshCategory();
         }
     }
 
     @action.bound
     async onSequenceClick(should_go_next) {
-        const current_block = this.xml_list.find(xml => xml.getAttribute('type') === this.block_type);
+        const current_block = Array.from(this.xml_list).find(xml => xml.getAttribute('type') === this.block_type);
 
         let current_block_index;
 
@@ -136,10 +133,9 @@ export default class FlyoutHelpStore {
     }
 
     @action.bound
-    initialiseFlyoutHelp(block_node) {
-        const toolbox = Blockly.derivWorkspace.getToolbox();
-        const selected_category = toolbox.getSelectedItem();
-        this.xml_list = toolbox.getCategoryContents(selected_category);
+    initFlyoutHelp(block_node) {
+        const { flyout, toolbox } = this.root_store;
+        this.xml_list = toolbox.getCategoryContents(flyout.selected_category);
         this.xml_list_group = this.groupBy(this.xml_list, true);
 
         this.setHelpContent(block_node);
@@ -147,7 +143,7 @@ export default class FlyoutHelpStore {
 
     @action.bound
     async updateSequenceButtons() {
-        const current_block = this.xml_list.find(xml => xml.getAttribute('type') === this.block_type);
+        const current_block = Array.from(this.xml_list).find(xml => xml.getAttribute('type') === this.block_type);
         const current_index = Object.keys(this.xml_list_group).findIndex(
             key => current_block.getAttribute('type') === key
         );
@@ -165,7 +161,7 @@ export default class FlyoutHelpStore {
 
     // eslint-disable-next-line
     groupBy(nodes, should_include_block_only = false) {
-        return nodes.reduce(function(block_group, node) {
+        return Array.from(nodes).reduce((block_group, node) => {
             const type = node.getAttribute('type');
 
             if (should_include_block_only && type === null) {
@@ -182,5 +178,16 @@ export default class FlyoutHelpStore {
 
             return block_group;
         }, {});
+    }
+
+    @action.bound
+    setExamples(block_type) {
+        const { toolbox } = this.root_store;
+        const all_examples = [...toolbox.toolbox_examples.childNodes];
+        const help_content = help_content_config(__webpack_public_path__)[block_type];
+        const examples_ids = help_content.filter(el => el.type === 'example').map(example => example.example_id);
+        const examples = examples_ids.map(id => all_examples.find(example => example.id === id));
+
+        this.examples = examples;
     }
 }

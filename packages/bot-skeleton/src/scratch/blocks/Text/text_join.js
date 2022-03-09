@@ -46,14 +46,14 @@ Blockly.Blocks.text_join = {
         };
     },
     onIconClick() {
-        if (!this.workspace || this.isInFlyout) {
+        if (this.workspace.options.readOnly || this.isInFlyout) {
             return;
         }
 
         runGroupedEvents(false, () => {
             const text_block = this.workspace.newBlock('text_statement');
             text_block.required_parent_id = this.id;
-            text_block.setMovable(false);
+            text_block.setMovable(true);
             text_block.initSvg();
             text_block.render();
 

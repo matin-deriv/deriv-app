@@ -134,7 +134,7 @@ export const load = ({
                     save_modal.updateBotName(file_name);
                     workspace.clearUndo();
                     workspace.current_strategy_id = strategy_id || Blockly.utils.genUid();
-                    saveWorkspaceToRecent(xml, from);
+                    await saveWorkspaceToRecent(xml, from);
                 }
             }
 
@@ -160,7 +160,7 @@ export const load = ({
     }, 500);
 };
 
-const loadBlocks = (xml, drop_event, event_group, workspace) => {
+export const loadBlocks = (xml, drop_event, event_group, workspace) => {
     Blockly.Events.setGroup(event_group);
 
     const block_ids = Blockly.Xml.domToWorkspace(xml, workspace);
@@ -173,7 +173,7 @@ const loadBlocks = (xml, drop_event, event_group, workspace) => {
     }
 };
 
-const loadWorkspace = async (xml, event_group, workspace) => {
+export const loadWorkspace = async (xml, event_group, workspace) => {
     Blockly.Events.setGroup(event_group);
     await workspace.asyncClear();
 
@@ -306,12 +306,32 @@ export const addDomAsBlock = (el_block, parent_block = null) => {
 
 export const hasAllRequiredBlocks = workspace => {
     const blocks_in_workspace = workspace.getAllBlocks();
+    const trade_type_block = workspace.getAllBlocks(true).find(block => block.type === 'trade_definition_tradetype');
+    const selected_trade_type = trade_type_block.getFieldValue('TRADETYPE_LIST');
+    const mandatory_tradeoptions_block =
+        selected_trade_type === 'multiplier' ? 'trade_definition_multiplier' : 'trade_definition_tradeoptions';
     const { mandatoryMainBlocks } = config;
-    const required_block_types = ['trade_definition_tradeoptions', ...mandatoryMainBlocks];
+    const required_block_types = [mandatory_tradeoptions_block, ...mandatoryMainBlocks];
     const all_block_types = blocks_in_workspace.map(block => block.type);
     const has_all_required_blocks = required_block_types.every(block_type => all_block_types.includes(block_type));
 
     return has_all_required_blocks;
+};
+
+export const isAllRequiredBlocksEnabled = workspace => {
+    const trade_type_block = workspace.getAllBlocks(true).find(block => block.type === 'trade_definition_tradetype');
+    const selected_trade_type = trade_type_block.getFieldValue('TRADETYPE_LIST');
+    const mandatory_tradeoptions_block =
+        selected_trade_type === 'multiplier' ? 'trade_definition_multiplier' : 'trade_definition_tradeoptions';
+    const { mandatoryMainBlocks } = config;
+    const required_block_types = [mandatory_tradeoptions_block, ...mandatoryMainBlocks];
+
+    const enabled_blocks_types = workspace
+        .getAllBlocks()
+        .filter(block => !block.disabled)
+        .map(block => block.type);
+
+    return required_block_types.every(required_type => enabled_blocks_types.includes(required_type));
 };
 
 export const scrollWorkspace = (workspace, scroll_amount, is_horizontal, is_chronological) => {
@@ -322,7 +342,9 @@ export const scrollWorkspace = (workspace, scroll_amount, is_horizontal, is_chro
 
     if (is_horizontal) {
         scroll_x += is_chronological ? scroll_amount : -scroll_amount;
+        scroll_y += -20;
     } else {
+        scroll_x += -20;
         scroll_y += is_chronological ? scroll_amount : -scroll_amount;
     }
 

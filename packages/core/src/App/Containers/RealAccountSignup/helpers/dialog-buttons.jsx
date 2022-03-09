@@ -14,7 +14,7 @@ const getDismissButton = ({ status, landing_company_shortcode, closeModal, switc
                 };
             } else if (status === EXPERIAN.WARN) {
                 return {
-                    label: localize('Trade on demo account'),
+                    label: localize('Trade on demo'),
                     action: () => {
                         closeModal();
                         switchToVirtual();
@@ -38,6 +38,8 @@ const getDismissButton = ({ status, landing_company_shortcode, closeModal, switc
 const getActionButton = ({
     status,
     landing_company_shortcode,
+    is_fully_authenticated,
+    closeModal,
     closeModalAndOpenCashier,
     closeModalAndOpenPOI,
     closeModalAndOpenPOA,
@@ -51,16 +53,26 @@ const getActionButton = ({
                 };
             } else if (status === EXPERIAN.WARN) {
                 return {
-                    label: localize('Upload documents'),
+                    label: localize('Submit proof'),
                     action: closeModalAndOpenPOA,
                 };
+            } else if (status === EXPERIAN.PENDING) {
+                return {
+                    label: localize('OK'),
+                    action: closeModal,
+                };
             }
-
             return {
-                label: localize('Deposit now'),
+                label: localize('Deposit'),
                 action: closeModalAndOpenCashier,
             };
         case 'maltainvest':
+            if (is_fully_authenticated) {
+                return {
+                    label: localize('Deposit'),
+                    action: closeModalAndOpenCashier,
+                };
+            }
             return {
                 label: localize('Submit proof'),
                 action: closeModalAndOpenPOI,
@@ -69,7 +81,7 @@ const getActionButton = ({
         case 'malta':
         default:
             return {
-                label: localize('Deposit now'),
+                label: localize('Deposit'),
                 action: closeModalAndOpenCashier,
             };
     }
@@ -77,15 +89,19 @@ const getActionButton = ({
 const DialogPrimaryButton = ({
     status,
     landing_company_shortcode,
+    closeModal,
     closeModalAndOpenCashier,
     closeModalAndOpenPOI,
     closeModalAndOpenPOA,
+    is_fully_authenticated,
 }) => {
     // Check if the button is necessary
     // Fetch proper action from store based on status + landing_company_shortcode
     const { label, action } = getActionButton({
         status,
         landing_company_shortcode,
+        is_fully_authenticated,
+        closeModal,
         closeModalAndOpenCashier,
         closeModalAndOpenPOI,
         closeModalAndOpenPOA,
@@ -93,7 +109,8 @@ const DialogPrimaryButton = ({
 
     return <Button primary text={label} onClick={action} />;
 };
-const DialogDismissButton = ({ status, landing_company_shortcode, closeModal, switchToVirtual }) => {
+const DialogDismissButton = ({ status, landing_company_shortcode, closeModal, switchToVirtual, is_bypassed }) => {
+    if (is_bypassed) return null;
     const { label, action } = getDismissButton({
         status,
         landing_company_shortcode,
@@ -106,6 +123,7 @@ const DialogDismissButton = ({ status, landing_company_shortcode, closeModal, sw
 export const DialogButtons = ({
     status,
     landing_company_shortcode,
+    is_fully_authenticated,
     closeModal,
     closeModalAndOpenCashier,
     closeModalAndOpenPOA,
@@ -113,9 +131,10 @@ export const DialogButtons = ({
     switchToVirtual,
 }) => {
     return (
-        <div className='status-dialog__btn-area'>
+        <div className='status-dialog__footer'>
             <DialogDismissButton
                 closeModal={closeModal}
+                is_bypassed={status === EXPERIAN.PENDING}
                 status={status}
                 landing_company_shortcode={landing_company_shortcode}
                 switchToVirtual={switchToVirtual}
@@ -123,9 +142,11 @@ export const DialogButtons = ({
             <DialogPrimaryButton
                 status={status}
                 landing_company_shortcode={landing_company_shortcode}
+                closeModal={closeModal}
                 closeModalAndOpenCashier={closeModalAndOpenCashier}
                 closeModalAndOpenPOI={closeModalAndOpenPOI}
                 closeModalAndOpenPOA={closeModalAndOpenPOA}
+                is_fully_authenticated={is_fully_authenticated}
             />
         </div>
     );
@@ -134,6 +155,7 @@ export const DialogButtons = ({
 DialogButtons.propTypes = {
     status: PropTypes.number,
     landing_company_shortcode: PropTypes.string,
+    is_fully_authenticated: PropTypes.bool,
     closeModal: PropTypes.func,
     closeModalAndOpenCashier: PropTypes.func,
     closeModalAndOpenPOI: PropTypes.func,

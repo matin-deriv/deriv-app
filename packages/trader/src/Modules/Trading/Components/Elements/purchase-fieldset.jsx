@@ -29,7 +29,7 @@ class PurchaseFieldset extends React.PureComponent {
             is_disabled,
             is_high_low,
             is_loading,
-            is_market_close,
+            is_market_closed,
             is_multiplier,
             is_proposal_empty,
             is_proposal_error,
@@ -50,6 +50,7 @@ class PurchaseFieldset extends React.PureComponent {
                     currency={currency}
                     info={info}
                     index={index}
+                    has_deal_cancellation={is_multiplier && has_cancellation}
                     is_disabled={is_disabled}
                     is_high_low={is_high_low}
                     is_loading={is_loading}
@@ -85,17 +86,18 @@ class PurchaseFieldset extends React.PureComponent {
                             'trade-container__fieldset-wrapper--disabled': is_proposal_error || is_disabled,
                         })}
                     >
-                        <ContractInfo
-                            basis={basis}
-                            currency={currency}
-                            proposal_info={info}
-                            has_cancellation={has_cancellation}
-                            has_increased={info.has_increased}
-                            is_loading={is_loading}
-                            is_multiplier={is_multiplier}
-                            should_fade={this.state.should_fade}
-                            type={type}
-                        />
+                        {(has_cancellation || !is_multiplier) && (
+                            <ContractInfo
+                                basis={basis}
+                                currency={currency}
+                                proposal_info={info}
+                                has_increased={info.has_increased}
+                                is_loading={is_loading}
+                                is_multiplier={is_multiplier}
+                                should_fade={this.state.should_fade}
+                                type={type}
+                            />
+                        )}
                         <div
                             className={classNames('btn-purchase__shadow-wrapper', {
                                 'btn-purchase__shadow-wrapper--disabled': is_proposal_error || is_disabled,
@@ -112,19 +114,33 @@ class PurchaseFieldset extends React.PureComponent {
                             }}
                         >
                             <div className='btn-purchase__box-shadow' />
-                            {is_proposal_error && !is_market_close ? (
+                            {is_proposal_error && !is_market_closed ? (
                                 <Popover
                                     has_error
                                     alignment='left'
                                     message={info.message}
-                                    is_open={is_proposal_error && !is_market_close}
+                                    is_open={is_proposal_error && !is_market_closed}
                                     relative_render
                                     margin={6}
                                 >
                                     {purchase_button}
                                 </Popover>
                             ) : (
-                                purchase_button
+                                <React.Fragment>
+                                    {is_multiplier ? (
+                                        <Popover
+                                            alignment='left'
+                                            is_bubble_hover_enabled
+                                            margin={8}
+                                            message={info.message}
+                                            relative_render
+                                        >
+                                            {purchase_button}
+                                        </Popover>
+                                    ) : (
+                                        purchase_button
+                                    )}
+                                </React.Fragment>
                             )}
                             {
                                 // is_purchase_confirm_on ?
@@ -161,7 +177,7 @@ PurchaseFieldset.propTypes = {
     is_disabled: PropTypes.bool,
     is_high_low: PropTypes.bool,
     is_loading: PropTypes.bool,
-    is_market_close: PropTypes.bool,
+    is_market_closed: PropTypes.bool,
     is_multiplier: PropTypes.bool,
     is_proposal_empty: PropTypes.bool,
     is_proposal_error: PropTypes.bool,

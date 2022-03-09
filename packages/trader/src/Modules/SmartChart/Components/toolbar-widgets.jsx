@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import { isMobile, isDesktop } from '@deriv/shared';
+import { isDesktop, isMobile } from '@deriv/shared';
 import { ChartMode, DrawTools, Share, StudyLegend, Views, ToolbarWidget } from 'Modules/SmartChart';
 
 const ToolbarWidgets = ({ position, updateChartType, updateGranularity }) => (
@@ -19,4 +19,4 @@ ToolbarWidgets.propTypes = {
     updateGranularity: PropTypes.func,
 };
 
-export default ToolbarWidgets;
+export default React.memo(ToolbarWidgets);

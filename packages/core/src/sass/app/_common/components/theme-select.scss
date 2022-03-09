@@ -5,10 +5,8 @@
     width: 100%;
 
     &__title {
-        font-weight: bold;
-        font-size: 14px;
-        color: var(--text-general);
         margin-bottom: 16px;
+        color: var(--text-prominent);
     }
     &__content {
         display: flex;

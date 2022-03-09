@@ -2,66 +2,72 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { LinearProgress } from './linear-progress.jsx';
 
-class LinearProgressContainer extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            timeout: props.timeout / 1000,
-            total_ticks: Math.round(props.timeout / 1000),
-            current_tick: Math.round(props.timeout / 1000),
+const LinearProgressContainer = React.forwardRef(
+    ({ timeout, action, render, className, should_store_in_session, session_id }, ref) => {
+        const current_progress_timeout = sessionStorage.getItem(`linear_progress_timeout_${session_id}`);
+
+        const popup_timeout = !current_progress_timeout ? timeout / 1000 : current_progress_timeout;
+        const [timeout_state, setTimeoutState] = React.useState(popup_timeout);
+        const time_past = 100 - (timeout_state / (timeout / 1000)) * 100;
+
+        const getProgress = () => time_past;
+        const getRemaining = () => (timeout_state > 0 ? timeout_state : 0);
+        const makeProgress = () => {
+            setTimeoutState(timeout_current => timeout_current - 1);
         };
-    }
 
-    get progress() {
-        return 100 - Math.round((this.state.current_tick / this.state.total_ticks) * 100);
-    }
+        React.useImperativeHandle(ref, () => ({
+            removeTimeoutSession() {
+                if (should_store_in_session) {
+                    sessionStorage.removeItem(`linear_progress_timeout_${session_id}`);
+                }
+            },
+        }));
 
-    get remaining() {
-        return this.state.timeout >= 0 ? this.state.timeout : 0;
-    }
+        React.useEffect(() => {
+            if (should_store_in_session) {
+                sessionStorage.setItem(`linear_progress_timeout_${session_id}`, timeout_state);
+            }
+        }, [timeout_state, should_store_in_session, session_id]);
 
-    makeProgress = () => {
-        this.setState({
-            current_tick: this.state.current_tick - 1,
-            timeout: this.state.timeout - 1,
+        React.useEffect(() => {
+            const interval = setInterval(makeProgress, 1000);
+            return () => {
+                clearInterval(interval);
+            };
+        }, []);
+
+        React.useEffect(() => {
+            if (getProgress() > 100) {
+                action();
+            }
         });
-    };
 
-    run = () => {
-        this.props.action();
-    };
-
-    componentDidMount() {
-        this.interval = setInterval(this.makeProgress, 1000);
-    }
-
-    componentDidUpdate() {
-        if (this.progress > 100) {
-            this.run();
+        if (current_progress_timeout <= 0) {
+            sessionStorage.removeItem(`linear_progress_timeout_${session_id}`);
+        } else if (current_progress_timeout > 0) {
+            sessionStorage.setItem(`linear_progress_timeout_${session_id}`, timeout_state);
+        } else {
+            return null;
         }
-    }
 
-    componentWillUnmount() {
-        clearInterval(this.interval);
-    }
-
-    render() {
-        const { timeout, className } = this.props;
         if (!timeout) return null;
 
         return (
             <div className='dc-linear-progress-container'>
-                <div className='dc-linear-progress__countdown'>{this.props.render(this.remaining)}</div>
-                <LinearProgress className={className} progress={this.progress} height={4} />
+                <div className='dc-linear-progress__countdown'>{render(getRemaining())}</div>
+                <LinearProgress className={className} progress={getProgress()} height={4} />
             </div>
         );
     }
-}
+);
 
 LinearProgressContainer.propTypes = {
     timeout: PropTypes.number,
     action: PropTypes.func,
     render: PropTypes.func.isRequired,
 };
+
+LinearProgressContainer.displayName = 'LinearProgressContainer';
 
 export default LinearProgressContainer;

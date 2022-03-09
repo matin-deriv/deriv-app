@@ -19,19 +19,19 @@ const ChartSettingContainer = Loadable({
 //     loading: UILoader,
 // });
 
-class TradeSettingsExtensions extends React.Component {
-    populateSettings = () => {
-        const { populateSettingsExtensions } = this.props;
+const renderItemValue = (props, store) => (
+    <MobxContentProvider store={store}>
+        <ChartSettingContainer {...props} />
+    </MobxContentProvider>
+);
 
+const TradeSettingsExtensions = ({ populateSettingsExtensions, store }) => {
+    const populateSettings = () => {
         const menu_items = [
             {
                 icon: 'IcChart',
                 label: localize('Charts'),
-                value: ({ ...props }) => (
-                    <MobxContentProvider store={this.props.store}>
-                        <ChartSettingContainer {...props} />
-                    </MobxContentProvider>
-                ),
+                value: props => renderItemValue(props, store),
                 // uncomment below lines to bring back purchase lock and purchase confirmation}
                 // }, {
                 //     icon : IconPurchase,
@@ -39,30 +39,21 @@ class TradeSettingsExtensions extends React.Component {
                 //     value: PurchaseSettings,
             },
         ];
-
         populateSettingsExtensions(menu_items);
     };
 
-    componentDidMount() {
-        this.populateSettings();
-    }
+    React.useEffect(() => {
+        return () => populateSettingsExtensions(null);
+    }, [populateSettingsExtensions]);
 
-    componentDidUpdate() {
-        this.populateSettings();
-    }
+    React.useEffect(() => populateSettings());
 
-    componentWillUnmount() {
-        this.props.populateSettingsExtensions(null);
-    }
-
-    // eslint-disable-next-line class-methods-use-this
-    render() {
-        return null;
-    }
-}
+    return null;
+};
 
 TradeSettingsExtensions.propTypes = {
     populateSettingsExtensions: PropTypes.func,
+    store: PropTypes.object,
 };
 
 export default connect(({ ui }) => ({

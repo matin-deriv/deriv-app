@@ -24,6 +24,7 @@ const DatePickerInput = ({
     readOnly,
     value,
     required,
+    ...common_props
 }) => {
     const [is_clear_btn_visible, setIsClearBtnVisible] = React.useState(false);
 
@@ -39,16 +40,16 @@ const DatePickerInput = ({
 
     const OpenIcon = (
         <DatePickerIcon
-            onClick={onClick}
             className={classNames({
                 'dc-datepicker__icon': typeof onClick === 'function',
             })}
             icon='IcCalendar'
+            {...(disabled ? { color: 'disabled' } : { onClick })}
         />
     );
 
     const trailing_icon =
-        is_clearable && is_clear_btn_visible ? (
+        is_clearable && is_clear_btn_visible && !disabled ? (
             <DatePickerIcon icon='IcCloseCircle' onClick={onClickClear} color='secondary' />
         ) : (
             OpenIcon
@@ -80,6 +81,7 @@ const DatePickerInput = ({
             onMouseLeave={onMouseLeave}
             onBlur={onBlur}
             required={required}
+            {...common_props}
         />
     );
 };

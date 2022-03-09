@@ -15,7 +15,9 @@ const TickSteps = ({ hover_value, max_value, min_value, onClick, onMouseEnter, o
         <React.Fragment>
             {arr_ticks.map(idx => (
                 <span
+                    data-testid={`tick_step_${idx + min_value}`}
                     key={idx}
+                    data-value={idx + min_value}
                     className={classNames('range-slider__ticks-step', {
                         'range-slider__ticks-step--active': isActive(idx),
                         'range-slider__ticks-step--marked': isMarked(idx),

@@ -1,5 +1,5 @@
 import { localize } from '@deriv/translations';
-import { messageWithButton, arrayAsMessage } from '../components/notify-item.jsx';
+import { messageWithButton, arrayAsMessage } from 'Components';
 
 const showErrorMessageWithButton = (message, block_id, showErrorMessage, centerAndHighlightBlock) => {
     showErrorMessage(
@@ -28,6 +28,21 @@ export const isCustomJournalMessage = (
                 "Variable '{{variable_name}}' has no value. Please set a value for variable '{{variable_name}}' to notify.",
                 { variable_name }
             ),
+            block_id,
+            showErrorMessage,
+            centerAndHighlightBlock
+        );
+        return true;
+    }
+    // notify null variable block
+    if (message === null) {
+        pushMessage('NULL');
+        return true;
+    }
+    // notify NaN variable block
+    if (Object.is(message, NaN)) {
+        showErrorMessageWithButton(
+            localize('Tried to perform an invalid operation.'),
             block_id,
             showErrorMessage,
             centerAndHighlightBlock

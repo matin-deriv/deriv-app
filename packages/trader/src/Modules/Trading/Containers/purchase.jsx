@@ -10,10 +10,10 @@ const Purchase = ({
     contract_type,
     currency,
     has_cancellation,
-    is_client_allowed_to_visit, // TODO: [deriv-eu] Remove this after complete EU merge into production
     is_multiplier,
     is_mobile,
     is_purchase_enabled,
+    is_market_closed,
     // is_purchase_confirm_on,
     purchased_states_arr,
     // is_purchase_locked,
@@ -42,10 +42,8 @@ const Purchase = ({
             return index;
         };
         const info = proposal_info[type] || {};
-        const is_disabled = !is_trade_enabled || !info.id || !is_client_allowed_to_visit || !is_purchase_enabled;
+        const is_disabled = !is_trade_enabled || !info.id || !is_purchase_enabled;
         const is_proposal_error = is_multiplier ? info.has_error && !info.has_error_details : info.has_error;
-        const is_market_close =
-            is_proposal_error && info.error_code === 'ContractBuyValidationError' && info.error_field === 'symbol';
         const purchase_fieldset = (
             <PurchaseFieldset
                 basis={basis}
@@ -58,7 +56,7 @@ const Purchase = ({
                 is_disabled={is_disabled}
                 is_high_low={is_high_low}
                 is_loading={isLoading(info)}
-                is_market_close={is_market_close}
+                is_market_closed={is_market_closed}
                 is_mobile={is_mobile}
                 is_multiplier={is_multiplier}
                 // is_purchase_confirm_on={is_purchase_confirm_on}
@@ -93,7 +91,6 @@ Purchase.propTypes = {
     basis: PropTypes.string,
     currency: PropTypes.string,
     has_cancellation: PropTypes.bool,
-    is_client_allowed_to_visit: PropTypes.bool,
     is_multiplier: PropTypes.bool,
     is_mobile: PropTypes.bool,
     // is_purchase_confirm_on    : PropTypes.bool,
@@ -110,9 +107,8 @@ Purchase.propTypes = {
     validation_errors: PropTypes.object,
 };
 
-export default connect(({ client, modules, ui }) => ({
-    currency: client.currency,
-    is_client_allowed_to_visit: client.is_client_allowed_to_visit,
+export default connect(({ modules, ui }) => ({
+    currency: modules.trade.currency,
     basis: modules.trade.basis,
     contract_type: modules.trade.contract_type,
     has_cancellation: modules.trade.has_cancellation,

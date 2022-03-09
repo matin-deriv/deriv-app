@@ -8,7 +8,7 @@ import { config } from '../../constants/config';
  * @return {!Object} A menu option, containing text, enabled, and a callback.
  * @package
  */
-Blockly.ContextMenu.blockDuplicateOption = function(block) {
+Blockly.ContextMenu.blockDuplicateOption = function (block) {
     const enabled = !config.single_instance_blocks.includes(block.type);
     const duplicate_option = {
         callback() {
@@ -28,7 +28,7 @@ Blockly.ContextMenu.blockDuplicateOption = function(block) {
  * @return {!Object} A menu option, containing text, enabled, and a callback.
  * @package
  */
-Blockly.ContextMenu.wsCleanupOption = function(ws, numTopBlocks) {
+Blockly.ContextMenu.wsCleanupOption = function (ws, numTopBlocks) {
     return {
         text: localize('Rearrange Vertically'),
         enabled: numTopBlocks > 1,
@@ -45,7 +45,7 @@ Blockly.ContextMenu.wsCleanupOption = function(ws, numTopBlocks) {
  * @return {!Object} A menu option, containing text, enabled, and a callback.
  * @package
  */
-Blockly.ContextMenu.wsCollapseOption = function(hasExpandedBlocks, topBlocks) {
+Blockly.ContextMenu.wsCollapseOption = function (hasExpandedBlocks, topBlocks) {
     return {
         enabled: hasExpandedBlocks,
         text: localize('Collapse All Blocks'),
@@ -64,7 +64,7 @@ Blockly.ContextMenu.wsCollapseOption = function(hasExpandedBlocks, topBlocks) {
  * @return {!Object} A menu option, containing text, enabled, and a callback.
  * @package
  */
-Blockly.ContextMenu.wsExpandOption = function(hasCollapsedBlocks, topBlocks) {
+Blockly.ContextMenu.wsExpandOption = function (hasCollapsedBlocks, topBlocks) {
     return {
         enabled: hasCollapsedBlocks,
         text: localize('Expand All Blocks'),
@@ -82,11 +82,11 @@ Blockly.ContextMenu.wsExpandOption = function(hasCollapsedBlocks, topBlocks) {
  * @param {boolean} shouldCollapse True if the blocks should be collapsed, false if they should be expanded.
  * @private
  */
-Blockly.ContextMenu.toggleCollapseFn_ = function(blocks, shouldCollapse) {
+Blockly.ContextMenu.toggleCollapseFn_ = function (blocks, shouldCollapse) {
     blocks.forEach(block => block.setCollapsed(shouldCollapse));
 };
 
-Blockly.ContextMenu.wsDeleteOption = function(ws, blocks) {
+Blockly.ContextMenu.wsDeleteOption = function (ws, blocks) {
     // Option to delete all blocks.
     // Count the number of blocks that are deletable.
     const delete_list = Blockly.WorkspaceSvg.buildDeleteList_(blocks);
@@ -126,7 +126,7 @@ Blockly.ContextMenu.wsDeleteOption = function(ws, blocks) {
                 deleteNext();
             } else {
                 const msg = localize('Delete all {{ delete_count }} blocks?', { delete_count });
-                Blockly.confirm(msg, function(ok) {
+                Blockly.confirm(msg, ok => {
                     if (ok) {
                         deleteNext();
                     }
@@ -134,4 +134,140 @@ Blockly.ContextMenu.wsDeleteOption = function(ws, blocks) {
             }
         },
     };
+};
+
+/**
+ * Make a context menu option for adding or removing comments on the current block.
+ * deriv-bot: Expand block before adding comment.
+ * Hacky way to get comments working on collapsed blocks.
+ * @param {!Blockly.BlockSvg} block The block where the right-click originated.
+ * @return {!Object} A menu option, containing text, enabled, and a callback.
+ * @package
+ */
+Blockly.ContextMenu.blockCommentOption = function (block) {
+    const comment_option = { enabled: !goog.userAgent.IE };
+
+    // If there's already a comment, add an option to delete it.
+    if (block.comment) {
+        comment_option.text = localize('Remove comment');
+        comment_option.callback = () => {
+            block.setCommentText(null);
+        };
+    } else {
+        // If there's no comment, add an option to create a comment.
+        comment_option.text = localize('Add comment');
+        comment_option.callback = () => {
+            // deriv-bot: Expand/uncollapse for bubble to position correctly.
+            const is_collapsed = block.collapsed_;
+
+            if (is_collapsed) {
+                block.setCollapsed(false);
+            }
+
+            block.setCommentText('');
+
+            if (block.collapsed_ !== is_collapsed) {
+                block.setCollapsed(is_collapsed);
+            }
+
+            // deriv-bot: Don't focus to prevent workspace glitching.
+            // block.comment.focus();
+        };
+    }
+
+    return comment_option;
+};
+
+/**
+ * Make a context menu option for detaching the current block.
+ * deriv-bot: Use Blockly's implementation.
+ * @param {!Blockly.BlockSvg} block The block where the right-click originated.
+ * @return {!Object} A menu option, containing text, enabled, and a callback.
+ * @package
+ */
+Blockly.ContextMenu.blockDetachOption = function (block) {
+    const canDisconnect = block
+        .getConnections_()
+        .some(connection => connection.isConnected() && !connection.targetConnection?.sourceBlock_.isShadow_);
+
+    const enabled = block.parentBlock_ && canDisconnect;
+
+    const detach_option = {
+        callback() {
+            block.unplug(true);
+            block.moveBy(250, 100);
+        },
+        enabled,
+        text: localize('Detach Block'),
+    };
+    return detach_option;
+};
+
+/**
+ * Make a context menu option for disabling stack of blocks.
+ * deriv-bot: Use Blockly’s implementation.
+ * @param {!Blockly.BlockSvg} block The block where the right-click originated.
+ * @return {!Object} A menu option, containing text, enabled, and a callback.
+ * @package
+ */
+Blockly.ContextMenu.blockDisableOption = function (block) {
+    const checkAreSomeEnabled = (block_, enabledArr = []) => {
+        enabledArr.push(!block_.disabled);
+        return block_.nextConnection?.targetConnection
+            ? checkAreSomeEnabled(block_.nextConnection?.targetConnection.sourceBlock_, enabledArr)
+            : enabledArr.includes(true);
+    };
+    const enabled = checkAreSomeEnabled(block);
+
+    const disableBlocksRecursively = block_ => {
+        block_.setDisabled(true);
+        if (block_.nextConnection?.targetConnection) {
+            disableBlocksRecursively(block_.nextConnection?.targetConnection.sourceBlock_);
+        }
+    };
+
+    const disableStack_option = {
+        callback() {
+            disableBlocksRecursively(block);
+        },
+        enabled,
+        text: localize('Disable stack'),
+    };
+    return disableStack_option;
+};
+
+/**
+ * Make a context menu option for enabling stack of blocks.
+ * deriv-bot: Use Blockly’s implementation.
+ * @param {!Blockly.BlockSvg} block The block where the right-click originated.
+ * @return {!Object} A menu option, containing text, enabled, and a callback.
+ * @package
+ */
+Blockly.ContextMenu.blockEnableOption = function (block) {
+    const checkAreSomeDisabled = (block_, disabledArr = []) => {
+        if (block_.restricted_parents?.some(restricted_parent => block_.isDescendantOf(restricted_parent))) {
+            disabledArr.push(block_.disabled);
+            return block_.nextConnection?.targetConnection
+                ? checkAreSomeDisabled(block_.nextConnection?.targetConnection.sourceBlock_, disabledArr)
+                : disabledArr.includes(true);
+        }
+        return false;
+    };
+    const enabled = checkAreSomeDisabled(block);
+
+    const enableBlocksRecursively = block_ => {
+        block_.setDisabled(false);
+        if (block_.nextConnection?.targetConnection) {
+            enableBlocksRecursively(block_.nextConnection?.targetConnection.sourceBlock_);
+        }
+    };
+
+    const enableStack_option = {
+        callback() {
+            enableBlocksRecursively(block);
+        },
+        enabled,
+        text: localize('Enable stack'),
+    };
+    return enableStack_option;
 };

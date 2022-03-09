@@ -2,6 +2,7 @@ import React from 'react';
 import { str as crc32 } from 'crc-32';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { isProduction } from '../../../shared/src/utils/config/config';
 import withI18n from '../components';
 
 const LANGUAGE_KEY = 'i18n_language';
@@ -21,15 +22,24 @@ const ALL_LANGUAGES = Object.freeze({
     ZH_TW: '繁體中文',
 });
 
-const getUrlBase = (path = '') => {
-    const l = window.location;
+export const getAllowedLanguages = () => {
+    const allowed_languages = { EN: 'English', ID: 'Indonesia', PT: 'Português', ES: 'Español' };
+    const exclude_languages = ['ACH'];
+    // TODO Change language_list to const when languages are available in prod.
+    let language_list = Object.keys(getAllLanguages())
+        .filter(key => !exclude_languages.includes(key))
+        .reduce((obj, key) => {
+            obj[key] = getAllLanguages()[key];
+            return obj;
+        }, {});
 
-    if (!/^\/(br_)/.test(l.pathname)) return path;
+    // TODO Remove production check when all languages are available in prod.
+    if (isProduction()) language_list = allowed_languages;
 
-    return `/${l.pathname.split('/')[1]}${/^\//.test(path) ? path : `/${path}`}`;
+    return language_list;
 };
 
-const isStaging = () => /staging-app\.derivcrypto\.com|staging-app\.deriv\.com/i.test(window.location.hostname);
+const isStaging = () => /staging-app\.deriv\.com/i.test(window.location.hostname);
 
 const isLocal = () => /localhost\.binary\.sx/i.test(window.location.hostname);
 
@@ -41,7 +51,7 @@ const isLanguageAvailable = lang => {
 
     if (is_ach) return isStaging() || isLocal();
 
-    return Object.keys(ALL_LANGUAGES).includes(selected_language);
+    return Object.keys(getAllowedLanguages()).includes(selected_language);
 };
 
 export const getAllLanguages = () => ALL_LANGUAGES;
@@ -52,9 +62,10 @@ const getInitialLanguage = () => {
     const local_storage_language = localStorage.getItem(LANGUAGE_KEY);
 
     if (query_lang) {
-        if (isLanguageAvailable(query_lang)) {
-            localStorage.setItem(LANGUAGE_KEY, query_lang);
-            return query_lang;
+        const query_lang_uppercase = query_lang.toUpperCase();
+        if (isLanguageAvailable(query_lang_uppercase)) {
+            localStorage.setItem(LANGUAGE_KEY, query_lang_uppercase);
+            return query_lang_uppercase;
         }
     }
 
@@ -69,10 +80,10 @@ const getInitialLanguage = () => {
 
 const loadLanguageJson = async lang => {
     if (!i18n.hasResourceBundle(lang, 'translations') && lang.toUpperCase() !== DEFAULT_LANGUAGE) {
-        const response = await fetch(getUrlBase(`/public/i18n/${lang.toLowerCase()}.json`));
-        const lang_json = await response.text();
+        const response = await import(/* webpackChunkName: "[request]" */ `../translations/${lang.toLowerCase()}.json`);
 
-        i18n.addResourceBundle(lang, 'translations', JSON.parse(lang_json));
+        const lang_json = response;
+        i18n.addResourceBundle(lang, 'translations', lang_json);
         document.documentElement.setAttribute('lang', lang);
     }
 };
@@ -100,9 +111,7 @@ export const initializeTranslations = async () => {
     await loadLanguageJson(initial_language);
 };
 
-export const getLanguage = () => {
-    return i18n.language || initial_language;
-};
+export const getLanguage = () => i18n.language || initial_language;
 
 // eslint-disable-next-line no-unused-vars
 export const changeLanguage = async (lang, cb) => {
@@ -144,6 +153,9 @@ export const useOnLoadTranslation = () => {
     const [is_loaded, setLoaded] = React.useState(false);
 
     React.useEffect(() => {
+        if (!i18n.language) {
+            i18n.language = getInitialLanguage();
+        }
         const is_english = i18n.language === 'EN';
 
         if (is_english) {

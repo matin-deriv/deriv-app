@@ -39,6 +39,7 @@ module.exports = async ({ config, mode }) => {
         use: {
             loader: 'babel-loader',
             options: {
+                cacheDirectory: true,
                 presets: ['@babel/preset-env', '@babel/preset-react'],
                 plugins: [
                     ['@babel/plugin-proposal-decorators', { legacy: true }],
@@ -57,7 +58,7 @@ module.exports = async ({ config, mode }) => {
     config.plugins.push(
         new CopyPlugin({
             patterns: [
-                { from: path.resolve(__dirname, '../lib/icon/sprite'), to: 'public/images/sprite', toType: 'dir' },
+                { from: path.resolve(__dirname, '../lib/icon/sprites'), to: 'public/sprites', toType: 'dir' },
             ],
         })
     );

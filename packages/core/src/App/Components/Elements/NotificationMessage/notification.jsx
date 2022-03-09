@@ -1,15 +1,20 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
-import { Button, LinearProgress } from '@deriv/components';
+import { Button, LinearProgress, Text } from '@deriv/components';
 import { isEmptyObject, PlatformContext } from '@deriv/shared';
 import CloseButton from './close-button.jsx';
 import NotificationStatusIcons from './notification-status-icons.jsx';
+import NotificationBanner from './notification-banner.jsx';
 import { default_delay, types } from './constants';
+import NotificationPromo from './notification-promo.jsx';
 import { BinaryLink } from '../../Routes';
+import NotificationCloseMxMlt from './notification-close-mx-mlt.jsx';
 
 const Notification = ({ data, removeNotificationMessage }) => {
-    const { is_deriv_crypto } = React.useContext(PlatformContext);
+    const linear_progress_container_ref = React.useRef(null);
+    const { is_appstore } = React.useContext(PlatformContext);
+
     const destroy = is_closed_by_user => {
         removeNotificationMessage(data);
 
@@ -24,54 +29,111 @@ const Notification = ({ data, removeNotificationMessage }) => {
         setTimeout(destroy, data.delay || default_delay);
     }
 
-    return (
-        <div
-            className={classNames('notification', types[data.type], {
-                'notification--small': data.size === 'small',
-            })}
-        >
-            <div className='notification__icon-background'>
-                <NotificationStatusIcons type={data.type} class_suffix='is-background' />
-            </div>
-            <div className='notification__icon'>
-                <NotificationStatusIcons type={data.type} />
-            </div>
-            <div className='notification__text-container'>
-                <h4 className='notification__header'>{data.header}</h4>
-                {data.timeout && (
-                    <LinearProgress
-                        className='notification__timeout'
-                        timeout={data.timeout}
-                        action={data.action.onClick}
-                        render={data.timeoutMessage}
-                    />
-                )}
-                <p className='notification__text-body'>{data.message}</p>
-                <div className='notification__action'>
-                    {!isEmptyObject(data.action) && (
-                        <React.Fragment>
-                            {data.action.route ? (
-                                <BinaryLink
-                                    className={classNames('dc-btn', 'dc-btn--secondary', 'notification__cta-button')}
-                                    to={data.action.route}
-                                >
-                                    <span className='dc-btn__text'>{data.action.text}</span>
-                                </BinaryLink>
-                            ) : (
-                                <Button
-                                    className='notification__cta-button'
-                                    onClick={() => data.action.onClick({ is_deriv_crypto })}
-                                    text={data.action.text}
-                                    secondary
-                                />
+    switch (data.type) {
+        case 'news':
+            return (
+                <NotificationBanner
+                    header={data.header}
+                    message={data.message}
+                    primary_btn={data.primary_btn}
+                    img_src={data.img_src}
+                    img_alt={data.img_alt}
+                    onClose={destroy}
+                />
+            );
+        case 'close_mx_mlt':
+            return (
+                <NotificationCloseMxMlt
+                    header={data.header}
+                    message={data.message}
+                    secondary_btn={data.secondary_btn}
+                    img_src={data.img_src}
+                    img_alt={data.img_alt}
+                    onClose={destroy}
+                />
+            );
+        case 'promotions':
+            return (
+                <NotificationPromo
+                    cta_btn={data.cta_btn}
+                    img_alt={data.img_alt}
+                    img_src={data.img_src}
+                    message={data.message}
+                    onClose={destroy}
+                />
+            );
+        default:
+            return (
+                <div
+                    className={classNames('notification', types[data.type], {
+                        'notification--small': data.size === 'small',
+                    })}
+                >
+                    <div className='notification__icon-background'>
+                        <NotificationStatusIcons type={data.type} class_suffix='is-background' />
+                    </div>
+                    <div className='notification__icon'>
+                        <NotificationStatusIcons type={data.type} />
+                    </div>
+                    <div className='notification__text-container'>
+                        <Text as='h4' weight='bold' className='notification__header'>
+                            {data.header}
+                        </Text>
+                        {data.timeout && (
+                            <LinearProgress
+                                className='notification__timeout'
+                                timeout={data.timeout}
+                                action={data.action.onClick}
+                                render={data.timeoutMessage}
+                                should_store_in_session={true}
+                                session_id={data.key}
+                                ref={linear_progress_container_ref}
+                            />
+                        )}
+                        <p className='notification__text-body'>{data.message}</p>
+                        <div className='notification__action'>
+                            {!isEmptyObject(data.action) && (
+                                <React.Fragment>
+                                    {data.action.route ? (
+                                        <BinaryLink
+                                            className={classNames(
+                                                'dc-btn',
+                                                'dc-btn--secondary',
+                                                'notification__cta-button'
+                                            )}
+                                            to={data.action.route}
+                                        >
+                                            <Text size='xxs' weight='bold'>
+                                                {data.action.text}
+                                            </Text>
+                                        </BinaryLink>
+                                    ) : (
+                                        <Button
+                                            className='notification__cta-button'
+                                            onClick={() => {
+                                                if (data.timeout)
+                                                    linear_progress_container_ref.current.removeTimeoutSession();
+                                                data.action.onClick({ is_appstore });
+                                            }}
+                                            text={data.action.text}
+                                            secondary
+                                            renderText={text => (
+                                                <Text size='xxs' weight='bold' align='center'>
+                                                    {text}
+                                                </Text>
+                                            )}
+                                        />
+                                    )}
+                                </React.Fragment>
                             )}
-                        </React.Fragment>
+                        </div>
+                    </div>
+                    {!data.should_hide_close_btn && (
+                        <CloseButton className='notification__close-button' onClick={onClick} />
                     )}
                 </div>
-            </div>
-            {!data.should_hide_close_btn && <CloseButton className='notification__close-button' onClick={onClick} />}
-        </div>
-    );
+            );
+    }
 };
 
 Notification.propTypes = {
@@ -88,7 +150,17 @@ Notification.propTypes = {
         message: PropTypes.oneOfType([PropTypes.node, PropTypes.string]),
         should_hide_close_btn: PropTypes.bool,
         size: PropTypes.oneOf(['small']),
-        type: PropTypes.oneOf(['warning', 'info', 'success', 'danger', 'contract_sold']).isRequired,
+        type: PropTypes.oneOf([
+            'warning',
+            'info',
+            'success',
+            'danger',
+            'contract_sold',
+            'news',
+            'announce',
+            'promotions',
+            'close_mx_mlt',
+        ]).isRequired,
     }),
     removeNotificationMessage: PropTypes.func,
 };

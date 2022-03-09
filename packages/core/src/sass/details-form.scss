@@ -9,6 +9,15 @@
         overflow-y: auto;
     }
 
+    &__sub-header {
+        @include desktop {
+            margin: 0 4rem 4rem;
+        }
+        @include mobile {
+            margin-bottom: 0.8rem;
+        }
+    }
+
     &__elements {
         flex-grow: 1;
         margin: 1.2rem auto;
@@ -41,21 +50,23 @@
             label {
                 top: 0.9rem;
                 background-color: var(--general-main-2);
-
                 @include mobile {
-                    background-color: var(--general-section-2);
+                    background-color: var(--fill-normal);
                 }
+            }
+            .dc-field--error {
+                font-size: 1.1rem;
             }
             @include desktop {
                 /* To get rid of ugly chrome autofill shadow dom-applied background color */
                 &__field {
                     &:-webkit-autofill {
-                        -webkit-box-shadow: 0 0 0 30px var(--general-main-2) inset !important;
+                        -webkit-box-shadow: 0 0 0 30px var(--fill-normal) inset !important;
 
                         &:hover,
                         &:focus,
                         &:active {
-                            -webkit-box-shadow: 0 0 0 30px var(--general-main-2) inset !important;
+                            -webkit-box-shadow: 0 0 0 30px var(--fill-normal) inset !important;
                         }
                     }
                 }
@@ -63,7 +74,7 @@
         }
         .dc-datepicker__input {
             .dc-input__field {
-                background-color: var(--general-main-2);
+                background-color: var(--fill-normal);
             }
         }
         .dc-select-native {
@@ -82,8 +93,8 @@
         @include mobile {
             width: 100%;
             margin: 0;
-            padding: 1rem 1.6rem 0;
-            overflow-y: scroll;
+            padding: 1rem 1.6rem 6rem;
+            overflow-y: auto;
         }
     }
     &__loader {
@@ -122,20 +133,13 @@
         .dc-checkbox__box {
             align-self: baseline;
         }
-        .dc-checkbox__label {
-            line-height: 1.43;
-        }
     }
     .dc-page-error__container {
         height: 100%;
     }
     &__description {
-        text-align: left;
-        font-size: var(--text-size-xxs);
-        line-height: 1.8rem;
         margin: 1.6rem auto;
         width: 45%;
-        color: var(--text-general);
         @include desktop {
             display: flex;
             flex-direction: column;
@@ -148,7 +152,6 @@
             width: unset;
             margin: 0 2.4rem;
             line-height: 20px;
-            color: var(--text-less-prominent);
         }
     }
 }

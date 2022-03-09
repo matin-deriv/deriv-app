@@ -3,47 +3,57 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import ThemedScrollbars from '../themed-scrollbars';
 
-export default class TableRowInfo extends React.Component {
-    constructor(props) {
-        super(props);
+const TableRowInfo = ({ replace, is_footer, cells, className, is_dynamic_height, measure }) => {
+    const [show_details, setShowDetails] = React.useState(false);
 
-        this.state = {
-            showDetails: false,
-        };
-    }
-
-    toggleDetails = () => {
-        if (this.props.replace) {
-            this.setState(state => ({ showDetails: !state.showDetails }));
+    const toggleDetails = () => {
+        if (replace) {
+            setShowDetails(!show_details);
         }
     };
 
-    render() {
+    React.useEffect(() => {
+        if (is_dynamic_height) {
+            measure?.();
+        }
+    }, [show_details, is_dynamic_height, measure]);
+
+    if (is_dynamic_height) {
         return (
             <div
-                onClick={this.props.is_footer || !this.props.replace ? undefined : this.toggleDetails}
-                className={classNames(this.props.className, { 'statement__row--detail': this.state.showDetails })}
+                onClick={is_footer || !replace ? undefined : toggleDetails}
+                className={classNames(className, { 'statement__row--detail': show_details })}
             >
-                {this.state.showDetails ? (
-                    <ThemedScrollbars height='63px'>
-                        <div>
-                            {this.props.replace.component ? (
-                                this.props.replace.component
-                            ) : (
-                                <p className='statement__row--detail-text'>{this.props.replace.message}</p>
-                            )}
-                        </div>
-                    </ThemedScrollbars>
-                ) : (
-                    this.props.cells
-                )}
+                {show_details ? <div>{replace?.component}</div> : cells}
             </div>
         );
     }
-}
+    return (
+        <div
+            onClick={is_footer || !replace ? undefined : toggleDetails}
+            className={classNames(className, { 'statement__row--detail': show_details })}
+        >
+            {show_details ? (
+                <ThemedScrollbars height='80px'>
+                    <div>{replace?.component}</div>
+                </ThemedScrollbars>
+            ) : (
+                cells
+            )}
+        </div>
+    );
+};
 
 TableRowInfo.propTypes = {
     cells: PropTypes.arrayOf(PropTypes.node),
     className: PropTypes.string,
-    replace: PropTypes.object,
+    replace: PropTypes.shape({
+        component: PropTypes.object,
+        message: PropTypes.string,
+    }),
+    is_footer: PropTypes.bool,
+    is_dynamic_height: PropTypes.bool,
+    measure: PropTypes.func,
 };
+
+export default TableRowInfo;

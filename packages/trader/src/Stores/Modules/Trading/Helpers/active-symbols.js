@@ -1,10 +1,8 @@
 import { flow } from 'mobx';
-import { localize } from '@deriv/translations';
-import { redirectToLogin } from '_common/base/login';
-import { LocalStore } from '@deriv/shared';
-import { WS } from 'Services/ws-methods';
+import { LocalStore, redirectToLogin, WS } from '@deriv/shared';
+import { getLanguage, localize } from '@deriv/translations';
 
-export const showUnavailableLocationError = flow(function*(showError, is_logged_in) {
+export const showUnavailableLocationError = flow(function* (showError, is_logged_in) {
     const website_status = yield WS.wait('website_status');
     const residence_list = yield WS.residenceList();
 
@@ -23,7 +21,37 @@ export const showUnavailableLocationError = flow(function*(showError, is_logged_
         message: localize('If you have an account, log in to continue.'),
         header,
         redirect_label: localize('Log in'),
-        redirectOnClick: () => redirectToLogin(is_logged_in),
+        redirectOnClick: () => redirectToLogin(is_logged_in, getLanguage()),
+        should_show_refresh: false,
+    });
+});
+
+export const showMxMltUnavailableError = flow(function* (showError, can_have_mlt_account, can_have_mx_account) {
+    const get_settings = yield WS.wait('get_settings');
+    const residence_list = yield WS.residenceList();
+
+    const clients_country_code = get_settings.get_settings.country_code;
+    const clients_country_text = (
+        residence_list.residence_list.find(obj_country => obj_country.value === clients_country_code) || {}
+    ).text;
+
+    let header;
+
+    if (can_have_mlt_account) {
+        header = localize("Unfortunately, trading options isn't possible in your country");
+    } else if (clients_country_text || can_have_mx_account) {
+        header = localize('Sorry, trading is unavailable in {{clients_country}}.', {
+            clients_country: clients_country_text,
+        });
+    } else {
+        header = localize('Sorry, trading is unavailable in your current location.');
+    }
+
+    showError({
+        message: ' ',
+        header,
+        redirect_label: null,
+        redirectOnClick: () => ({}),
         should_show_refresh: false,
     });
 });
@@ -87,6 +115,15 @@ const findFirstSymbol = async (active_symbols, pattern) => {
     );
     const is_symbol_offered = await isSymbolOffered(first_symbol);
     if (is_symbol_offered) return first_symbol;
+    return undefined;
+};
+
+export const findFirstOpenMarket = async (active_symbols, markets) => {
+    const market = markets.shift();
+    const first_symbol = active_symbols.find(symbol_info => market === symbol_info.market && isSymbolOpen(symbol_info));
+    const is_symbol_offered = await isSymbolOffered(first_symbol);
+    if (is_symbol_offered) return { category: first_symbol.market, subcategory: first_symbol.submarket };
+    else if (markets.length > 0) return findFirstOpenMarket(active_symbols, markets);
     return undefined;
 };
 

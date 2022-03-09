@@ -1,149 +1,163 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import fromEntries from 'object.fromentries';
 import React from 'react';
-import { DesktopWrapper, MobileWrapper, Div100vhContainer, FormProgress } from '@deriv/components';
-import { isDesktop, toMoment, getLocation } from '@deriv/shared';
+import { DesktopWrapper, MobileWrapper, FormProgress, Wizard, Text } from '@deriv/components';
+import { toMoment, getLocation, makeCancellablePromise } from '@deriv/shared';
 import { Localize } from '@deriv/translations';
 import { connect } from 'Stores/connect';
-import { makeCancellablePromise } from '_common/base/cancellable_promise';
 import LoadingModal from './real-account-signup-loader.jsx';
+import AcceptRiskForm from './accept-risk-form.jsx';
 import { getItems } from './account-wizard-form';
+import 'Sass/details-form.scss';
 
-const SetCurrencyHeader = ({ has_target, has_real_account, has_currency, items, step }) => (
-    <React.Fragment>
-        {(!has_real_account || has_target) && has_currency && (
-            <React.Fragment>
-                <DesktopWrapper>
-                    <FormProgress steps={items} current_step={step} />
-                </DesktopWrapper>
-                <MobileWrapper>
-                    <div className='account-wizard__header-steps'>
-                        <h4 className='account-wizard__header-steps-title'>
-                            <Localize
-                                i18n_default_text='Step {{step}}: {{step_title}} ({{step}} of {{steps}})'
-                                values={{
-                                    step: step + 1,
-                                    steps: items.length,
-                                    step_title: items[step].header.title,
-                                }}
-                            />
-                        </h4>
-                        {items[step].header.active_title && (
-                            <h4 className='account-wizard__header-steps-subtitle'>{items[step].header.active_title}</h4>
-                        )}
-                    </div>
-                </MobileWrapper>
-            </React.Fragment>
-        )}
-        <DesktopWrapper>
-            {has_real_account && (!has_target || !has_currency) && (
-                <div className='account-wizard__set-currency'>
-                    {!has_currency && (
-                        <p>
-                            <Localize i18n_default_text='You have an account that do not have currency assigned. Please choose a currency to trade with this account.' />
-                        </p>
-                    )}
-                    <h2>
-                        <Localize i18n_default_text='Please choose your currency' />
-                    </h2>
-                </div>
+const StepperHeader = ({ has_target, has_real_account, items, getCurrentStep, getTotalSteps }) => {
+    const step = getCurrentStep() - 1;
+    const step_title = items[step].header ? items[step].header.title : '';
+
+    return (
+        <React.Fragment>
+            {(!has_real_account || has_target) && (
+                <React.Fragment>
+                    <DesktopWrapper>
+                        <FormProgress steps={items} current_step={step} />
+                    </DesktopWrapper>
+                    <MobileWrapper>
+                        <div className='account-wizard__header-steps'>
+                            <Text
+                                as='h4'
+                                styles={{ lineHeight: '20px', color: 'var(--brand-red-coral)' }}
+                                size='xs'
+                                weight='bold'
+                                className='account-wizard__header-steps-title'
+                            >
+                                <Localize
+                                    i18n_default_text='Step {{step}}: {{step_title}} ({{step}} of {{steps}})'
+                                    values={{
+                                        step: step + 1,
+                                        steps: getTotalSteps(),
+                                        step_title,
+                                    }}
+                                />
+                            </Text>
+                        </div>
+                    </MobileWrapper>
+                </React.Fragment>
             )}
-        </DesktopWrapper>
-    </React.Fragment>
-);
+        </React.Fragment>
+    );
+};
 
-class AccountWizard extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            finished: undefined,
-            mounted: true,
-            step: 0,
-            form_error: '',
-            items: [],
-        };
-    }
+const AccountWizard = props => {
+    const [finished] = React.useState(undefined);
+    const [mounted, setMounted] = React.useState(false);
+    const [form_error, setFormError] = React.useState('');
+    const [previous_data, setPreviousData] = React.useState([]);
+    const [state_items, setStateItems] = React.useState([]);
+    const [should_accept_financial_risk, setShouldAcceptFinancialRisk] = React.useState(false);
 
-    componentDidMount() {
-        this.props.fetchStatesList();
-        const { cancel, promise } = makeCancellablePromise(this.props.fetchResidenceList());
-        this.cancel = cancel;
+    React.useEffect(() => {
+        props.fetchStatesList();
+        const { cancel, promise } = makeCancellablePromise(props.fetchResidenceList());
         const { cancel: cancelFinancialAssessment, promise: financial_assessment_promise } = makeCancellablePromise(
-            this.props.fetchFinancialAssessment()
+            props.fetchFinancialAssessment()
         );
-        this.cancelFinancialAssessment = cancelFinancialAssessment;
 
         Promise.all([promise, financial_assessment_promise]).then(() => {
-            this.setState({
-                items: getItems(this.props),
-                mounted: false,
+            setStateItems(previous_state => {
+                if (!previous_state.length) {
+                    return getItems(props);
+                }
+                return previous_state;
             });
-
-            // If residence list is present, attempt to set phone field with the proper default value
-            // Otherwise, leave empty.
-            if (!this.residence_list?.length) {
-                const setDefaultPhone = country_code => {
-                    const items = [...this.state.items];
-                    if (items.length > 1 && 'phone' in items[1]?.form_value) {
-                        items[1].form_value.phone = items[1].form_value.phone || country_code || '';
-                        this.setState(items);
-                    }
-                };
-
-                this.getCountryCode().then(setDefaultPhone);
-            }
-
-            const previous_data = this.fetchFromStorage();
-            if (previous_data.length > 0) {
-                const items = [...this.state.items];
-                previous_data.forEach((item, index) => {
-                    if (item instanceof Object) {
-                        items[index].form_value = item;
-                    }
-                });
-                this.setState({
-                    items,
-                    step: this.props.step ?? 1,
-                });
-            }
+            setPreviousData(fetchFromStorage());
+            setMounted(true);
         });
-    }
 
-    fetchFromStorage = () => {
+        return () => {
+            cancel();
+            cancelFinancialAssessment();
+        };
+    }, []);
+
+    React.useEffect(() => {
+        if (previous_data.length > 0) {
+            const items = [...state_items];
+            previous_data.forEach((item, index) => {
+                if (item instanceof Object) {
+                    items[index].form_value = item;
+                }
+            });
+            setStateItems(items);
+            setPreviousData([]);
+        }
+    }, [previous_data]);
+
+    React.useEffect(() => {
+        if (props.residence_list.length) {
+            const setDefaultPhone = country_code => {
+                let items;
+                if (state_items.length) {
+                    items = state_items;
+                } else {
+                    items = getItems(props);
+                }
+
+                if (items.length > 1 && 'phone' in items[1]?.form_value) {
+                    items[1].form_value.phone = items[1].form_value.phone || country_code || '';
+                    setStateItems(items);
+                }
+            };
+            getCountryCode(props.residence_list).then(setDefaultPhone);
+        }
+    }, [props.residence_list]);
+
+    const fetchFromStorage = () => {
         const stored_items = localStorage.getItem('real_account_signup_wizard');
         try {
             const items = JSON.parse(stored_items);
-            localStorage.removeItem('real_account_signup_wizard');
             return items || [];
         } catch (e) {
-            localStorage.removeItem('real_account_signup_wizard');
             return [];
+        } finally {
+            localStorage.removeItem('real_account_signup_wizard');
         }
     };
 
-    get form_values() {
-        return this.state.items
+    const getCountryCode = async residence_list => {
+        const response = residence_list.find(item => item.value === props.residence);
+        if (!response || !response.phone_idd) return '';
+        return `+${response.phone_idd}`;
+    };
+
+    const form_values = () => {
+        return state_items
             .map(item => item.form_value)
             .reduce((obj, item) => {
-                const values = fromEntries(new Map(Object.entries(item)));
+                const original_form_values = fromEntries(new Map(Object.entries(item)));
+                const values = Object.keys(original_form_values).reduce((acc, current) => {
+                    acc[current] =
+                        typeof original_form_values[current] === 'string'
+                            ? original_form_values[current].trim()
+                            : original_form_values[current];
+                    return acc;
+                }, {});
                 if (values.date_of_birth) {
                     values.date_of_birth = toMoment(values.date_of_birth).format('YYYY-MM-DD');
                 }
                 if (values.place_of_birth) {
                     values.place_of_birth = values.place_of_birth
-                        ? getLocation(this.props.residence_list, values.place_of_birth, 'value')
+                        ? getLocation(props.residence_list, values.place_of_birth, 'value')
                         : '';
                 }
                 if (values.citizen) {
-                    values.citizen = values.citizen
-                        ? getLocation(this.props.residence_list, values.citizen, 'value')
-                        : '';
+                    values.citizen = values.citizen ? getLocation(props.residence_list, values.citizen, 'value') : '';
                 }
 
                 if (values.tax_residence) {
                     values.tax_residence = values.tax_residence
-                        ? getLocation(this.props.residence_list, values.tax_residence, 'value')
+                        ? getLocation(props.residence_list, values.tax_residence, 'value')
                         : values.tax_residence;
                 }
 
@@ -152,182 +166,162 @@ class AccountWizard extends React.Component {
                     ...values,
                 };
             });
-    }
-
-    get state_index() {
-        return this.state.step;
-    }
-
-    get has_target() {
-        return this.props.real_account_signup_target !== 'manage';
-    }
-
-    getCountryCode = async () => {
-        await this.props.fetchResidenceList();
-        this.props.fetchStatesList();
-        const response = this.props.residence_list.find(item => item.value === this.props.residence);
-        if (!response || !response.phone_idd) return '';
-        return `+${response.phone_idd}`;
     };
 
-    clearError = () => {
-        this.setState({
-            form_error: '',
-        });
+    const clearError = () => {
+        setFormError('');
     };
 
-    getCurrent = key => {
-        return key ? this.state.items[this.state_index][key] : this.state.items[this.state_index];
+    const getFinishedComponent = () => {
+        return finished;
     };
 
-    getFinishedComponent = () => {
-        return this.state.finished;
-    };
-
-    nextStep = setSubmitting => {
-        this.clearError();
-        // Check if account wizard is not finished
-        if (this.hasMoreSteps()) {
-            this.goNext();
-        } else {
-            this.createRealAccount(setSubmitting);
-        }
-    };
-
-    prevStep = () => {
-        if (this.state.step - 1 < 0) {
-            this.cancel();
-            this.cancelFinancialAssessment();
-            this.props.onClose();
+    const prevStep = (current_step, goToPreviousStep) => {
+        if (current_step - 1 < 0) {
+            props.onClose();
             return;
         }
 
-        this.setState({
-            step: this.state.step - 1,
-            form_error: '',
-        });
+        goToPreviousStep();
+        clearError();
     };
 
-    submitForm = () => {
-        const clone = { ...this.form_values };
+    const submitForm = (payload = undefined) => {
+        let clone = { ...form_values() };
         delete clone?.tax_identification_confirm; // This is a manual field and it does not require to be sent over
 
-        return this.props.realAccountSignup(clone);
+        if (payload) {
+            clone = {
+                ...clone,
+                ...payload,
+            };
+        }
+
+        return props.realAccountSignup(clone);
     };
 
-    setAccountCurrency = () => this.props.setAccountCurrency(this.form_values.currency);
+    const updateValue = (index, value, setSubmitting, goToNextStep) => {
+        saveFormData(index, value);
+        clearError();
 
-    updateValue = (index, value, setSubmitting) => {
-        this.saveFormData(index, value);
-        this.nextStep(setSubmitting);
+        // Check if account wizard is not finished
+        if (index + 1 >= state_items.length) {
+            createRealAccount();
+        } else {
+            goToNextStep();
+        }
     };
 
-    saveFormData = (index, value) => {
-        const cloned_items = Object.assign([], this.state.items);
+    const saveFormData = (index, value) => {
+        const cloned_items = Object.assign([], state_items);
         cloned_items[index].form_value = value;
-
-        this.setState({
-            items: cloned_items,
-        });
+        setStateItems(cloned_items);
     };
 
-    getPropsForChild = () => {
-        const passthrough = this.getCurrent('passthrough');
-        const props = this.getCurrent('props') || {};
+    const getCurrent = (key, step_index) => {
+        return key ? state_items[step_index][key] : state_items[step_index];
+    };
+
+    const getPropsForChild = step_index => {
+        const passthrough = getCurrent('passthrough', step_index);
+        const properties = getCurrent('props', step_index) || {};
 
         if (passthrough && passthrough.length) {
             passthrough.forEach(item => {
-                Object.assign(props, { [item]: this.props[item] });
+                Object.assign(properties, { [item]: props[item] });
             });
+            properties.bypass_to_personal = previous_data.length > 0;
         }
-        return props;
+        return properties;
     };
 
-    createRealAccount(setSubmitting) {
-        this.props.setLoading(true);
-        if (this.props.has_real_account && !this.props.has_currency) {
-            this.setAccountCurrency()
-                .then(response => {
-                    this.props.onFinishSuccess(response.echo_req.set_account_currency.toLowerCase());
-                })
-                .catch(error_message => {
-                    this.setState(
-                        {
-                            form_error: error_message,
-                        },
-                        () => setSubmitting(false)
-                    );
-                })
-                .finally(() => this.props.setLoading(false));
-        } else {
-            this.submitForm()
-                .then(response => {
-                    if (this.props.real_account_signup_target === 'maltainvest') {
-                        this.props.onFinishSuccess(response.new_account_maltainvest.currency.toLowerCase());
-                    } else {
-                        this.props.onFinishSuccess(response.new_account_real.currency.toLowerCase());
-                    }
-                })
-                .catch(error => {
-                    this.props.onError(error, this.state.items);
-                })
-                .finally(() => this.props.setLoading(false));
-        }
+    const createRealAccount = (payload = undefined) => {
+        props.setLoading(true);
+        submitForm(payload)
+            .then(response => {
+                props.setIsRiskWarningVisible(false);
+                if (props.real_account_signup_target === 'maltainvest') {
+                    props.onFinishSuccess(response.new_account_maltainvest.currency.toLowerCase());
+                } else if (props.real_account_signup_target === 'samoa') {
+                    props.onOpenWelcomeModal(response.new_account_samoa.currency.toLowerCase());
+                } else {
+                    props.onFinishSuccess(response.new_account_real.currency.toLowerCase());
+                }
+            })
+            .catch(error => {
+                if (error.code === 'show risk disclaimer') {
+                    props.setIsRiskWarningVisible(true);
+                    setShouldAcceptFinancialRisk(true);
+                } else {
+                    props.onError(error, state_items);
+                }
+            })
+            .finally(() => props.setLoading(false));
+    };
+
+    const onAcceptRisk = () => {
+        createRealAccount({ accept_risk: 1 });
+    };
+    const onDeclineRisk = () => {
+        props.onClose();
+        props.setIsRiskWarningVisible(false);
+    };
+
+    if (props.is_loading) return <LoadingModal />;
+    if (should_accept_financial_risk) {
+        return <AcceptRiskForm onConfirm={onAcceptRisk} onClose={onDeclineRisk} />;
     }
-
-    goNext() {
-        this.setState({
-            step: this.state.step + 1,
-        });
-    }
-
-    hasMoreSteps() {
-        if (!this.props.has_currency && this.props.has_real_account) {
-            return false;
-        }
-        return this.state.step + 1 < this.state.items.length;
-    }
-
-    render() {
-        if (this.state.mounted) return null;
-        if (this.props.is_loading) return <LoadingModal />;
-        if (!this.state.finished) {
-            const BodyComponent = this.getCurrent('body');
-            const passthrough = this.getPropsForChild();
-
+    if (!mounted) return null;
+    if (!finished) {
+        const wizard_steps = state_items.map((step, step_index) => {
+            const passthrough = getPropsForChild(step_index);
+            const BodyComponent = step.body;
             return (
-                <div
-                    className={classNames('account-wizard', {
-                        'account-wizard--set-currency': !this.props.has_currency,
-                    })}
-                >
-                    <SetCurrencyHeader
-                        has_real_account={this.props.has_real_account}
-                        step={this.state.step}
-                        items={this.state.items}
-                        has_currency={this.props.has_currency}
-                        has_target={this.has_target}
-                    />
-                    <Div100vhContainer className='account-wizard__body' is_disabled={isDesktop()} height_offset='110px'>
-                        <BodyComponent
-                            value={this.getCurrent('form_value')}
-                            index={this.state_index}
-                            onSubmit={this.updateValue}
-                            onCancel={this.prevStep}
-                            onSave={this.saveFormData}
-                            has_currency={this.props.has_currency}
-                            form_error={this.state.form_error}
-                            {...passthrough}
-                        />
-                    </Div100vhContainer>
-                </div>
+                <BodyComponent
+                    value={getCurrent('form_value', step_index)}
+                    index={step_index}
+                    onSubmit={updateValue}
+                    onCancel={prevStep}
+                    onSave={saveFormData}
+                    closeRealAccountSignup={props.closeRealAccountSignup}
+                    is_virtual={props.is_virtual}
+                    has_currency={props.has_currency}
+                    form_error={form_error}
+                    {...passthrough}
+                    key={step_index}
+                />
+            );
+        });
+
+        let navHeader = <div />;
+        if (props.real_account_signup_target !== 'samoa') {
+            navHeader = (
+                <StepperHeader
+                    has_real_account={props.has_real_account}
+                    items={state_items}
+                    has_currency={props.has_currency}
+                    has_target={props.real_account_signup_target !== 'manage'}
+                    setIsRiskWarningVisible={props.setIsRiskWarningVisible}
+                />
             );
         }
 
-        const FinishedModalItem = this.getFinishedComponent();
-        return <FinishedModalItem />;
+        return (
+            <Wizard
+                nav={navHeader}
+                className={classNames('account-wizard', {
+                    'account-wizard--set-currency': !props.has_currency,
+                    'account-wizard--deriv-crypto': props.real_account_signup_target === 'samoa',
+                })}
+            >
+                {wizard_steps}
+            </Wizard>
+        );
     }
-}
+
+    const FinishedModalItem = getFinishedComponent();
+    return <FinishedModalItem />;
+};
 
 AccountWizard.propTypes = {
     fetchResidenceList: PropTypes.func,
@@ -336,29 +330,28 @@ AccountWizard.propTypes = {
     onError: PropTypes.func,
     onLoading: PropTypes.func,
     onFinishSuccess: PropTypes.func,
+    onOpenWelcomeModal: PropTypes.func,
     realAccountSignup: PropTypes.func,
     residence: PropTypes.string,
     residence_list: PropTypes.array,
-    setAccountCurrency: PropTypes.func,
-    step: PropTypes.number,
 };
 
-export default connect(({ client, ui }) => ({
+export default connect(({ client, notifications, ui }) => ({
     account_settings: client.account_settings,
     is_fully_authenticated: client.is_fully_authenticated,
     realAccountSignup: client.realAccountSignup,
+    closeRealAccountSignup: ui.closeRealAccountSignup,
+    is_virtual: client.is_virtual,
     has_real_account: client.has_active_real_account,
     upgrade_info: client.upgrade_info,
     real_account_signup_target: ui.real_account_signup_target,
     has_currency: !!client.currency,
-    setAccountCurrency: client.setAccountCurrency,
     residence: client.residence,
     residence_list: client.residence_list,
     states_list: client.states_list,
     fetchStatesList: client.fetchStatesList,
     fetchResidenceList: client.fetchResidenceList,
-    refreshNotifications: client.refreshNotifications,
+    refreshNotifications: notifications.refreshNotifications,
     fetchFinancialAssessment: client.fetchFinancialAssessment,
-    needs_financial_assessment: client.needs_financial_assessment,
     financial_assessment: client.financial_assessment,
 }))(AccountWizard);

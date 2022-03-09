@@ -62,23 +62,21 @@ export default Engine =>
                         resolve(lastTick);
                     })
                     .catch(e => {
-                        if (e.name === 'MarketIsClosed') {
+                        if (e.code === 'MarketIsClosed') {
                             globalObserver.emit('Error', e);
-                            resolve(e.name);
+                            resolve(e.code);
                         }
                     })
             );
         }
 
         getLastDigit() {
-            return new Promise(resolve =>
-                this.getLastTick().then(tick => resolve(getLastDigit(tick, this.getPipSize())))
-            );
+            return new Promise(resolve => this.getLastTick().then(tick => resolve(getLastDigit(tick))));
         }
 
         getLastDigitList() {
             return new Promise(resolve =>
-                this.getTicks().then(ticks => resolve(ticks.map(tick => getLastDigit(tick, this.getPipSize()))))
+                this.getTicks().then(ticks => resolve(ticks.map(tick => getLastDigit(tick))))
             );
         }
 

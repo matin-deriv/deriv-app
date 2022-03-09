@@ -2,56 +2,51 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { CSSTransition } from 'react-transition-group';
-import Icon from '../icon';
+import Icon from '../icon/icon.jsx';
+import Text from '../text/text.jsx';
 
-class SubMenu extends React.PureComponent {
-    constructor(props) {
-        super(props);
-        this.state = {
-            is_expanded: false,
-        };
-    }
+const SubMenu = ({
+    children,
+    has_subheader,
+    onToggle,
+    submenu_toggle_class,
+    submenu_icon,
+    submenu_title,
+    submenu_suffix_icon,
+}) => {
+    const [is_expanded, setIsExpanded] = React.useState(false);
 
-    toggleMenu = () => {
-        const is_expanded = !this.state.is_expanded;
-        this.setState({ is_expanded });
-        if (this.props.onToggle) {
-            this.props.onToggle(is_expanded);
+    const toggleMenu = () => {
+        const should_expanded = !is_expanded;
+        setIsExpanded(should_expanded);
+        if (onToggle) {
+            onToggle(should_expanded);
         }
     };
-
-    render() {
-        return (
-            <React.Fragment>
-                <div
-                    className={classNames('dc-mobile-drawer__submenu-toggle', this.props.submenu_toggle_class)}
-                    onClick={this.toggleMenu}
-                >
-                    {this.props.submenu_icon && (
-                        <Icon className='dc-mobile-drawer__submenu-toggle-icon' icon={this.props.submenu_icon} />
-                    )}
-                    {this.props.submenu_title && (
-                        <h3 className='dc-mobile-drawer__submenu-toggle-text'>{this.props.submenu_title}</h3>
-                    )}
-                    {this.props.submenu_suffix_icon && (
-                        <Icon
-                            className='dc-mobile-drawer__submenu-toggle-suffix-icon'
-                            icon={this.props.submenu_suffix_icon}
-                        />
-                    )}
-                </div>
-                <SubMenuList
-                    has_subheader={this.props.has_subheader}
-                    is_expanded={this.state.is_expanded}
-                    submenu_title={this.props.submenu_title}
-                    collapse={this.toggleMenu}
-                >
-                    {this.props.children}
-                </SubMenuList>
-            </React.Fragment>
-        );
-    }
-}
+    return (
+        <React.Fragment>
+            <div className={classNames('dc-mobile-drawer__submenu-toggle', submenu_toggle_class)} onClick={toggleMenu}>
+                {submenu_icon && <Icon className='dc-mobile-drawer__submenu-toggle-icon' icon={submenu_icon} />}
+                {submenu_title && (
+                    <Text as='h3' size='xs'>
+                        {submenu_title}
+                    </Text>
+                )}
+                {submenu_suffix_icon && (
+                    <Icon className='dc-mobile-drawer__submenu-toggle-suffix-icon' icon={submenu_suffix_icon} />
+                )}
+            </div>
+            <SubMenuList
+                collapse={toggleMenu}
+                has_subheader={has_subheader}
+                is_expanded={is_expanded}
+                submenu_title={submenu_title}
+            >
+                {children}
+            </SubMenuList>
+        </React.Fragment>
+    );
+};
 
 SubMenu.propTypes = {
     children: PropTypes.node,
@@ -62,7 +57,7 @@ SubMenu.propTypes = {
     submenu_toggle_class: PropTypes.string,
 };
 
-const SubMenuList = ({ is_expanded, collapse, children, has_subheader, submenu_title }) => (
+const SubMenuList = ({ children, collapse, has_subheader, is_expanded, submenu_title }) => (
     <CSSTransition
         in={is_expanded}
         classNames={{
@@ -82,7 +77,11 @@ const SubMenuList = ({ is_expanded, collapse, children, has_subheader, submenu_t
                 <div className='dc-mobile-drawer__submenu-back'>
                     <Icon className='dc-mobile-drawer__submenu-back-icon' icon='IcChevronLeft' />
                 </div>
-                {submenu_title && <h3 className='dc-mobile-drawer__submenu-list-title-text'>{submenu_title}</h3>}
+                {submenu_title && (
+                    <Text as='h3' weight='bold' color='prominent'>
+                        {submenu_title}
+                    </Text>
+                )}
             </div>
             {children}
         </div>

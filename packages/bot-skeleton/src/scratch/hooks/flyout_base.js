@@ -1,4 +1,5 @@
 import { config } from '../../constants/config';
+import DBotStore from '../dbot-store';
 
 /**
  * Create a copy of this block on the workspace.
@@ -7,7 +8,7 @@ import { config } from '../../constants/config';
  *     went wrong with deserialization.
  * @package
  */
-Blockly.Flyout.prototype.createBlock = function(event, original_block) {
+Blockly.Flyout.prototype.createBlock = function (event, original_block) {
     Blockly.Events.disable();
 
     const main_workspace = this.targetWorkspace_;
@@ -53,8 +54,12 @@ Blockly.Flyout.prototype.createBlock = function(event, original_block) {
         this.hide();
     }
 
-    main_workspace.getToolbox().clearSelection();
+    const { flyout } = DBotStore.instance;
+    flyout.setIsSearchFlyout(false);
+    flyout.setVisibility(false);
+
     new_block.isInFlyout = false;
+
     return new_block;
 };
 
@@ -65,7 +70,7 @@ Blockly.Flyout.prototype.createBlock = function(event, original_block) {
  * @return {!Blockly.Block} The new block in the main workspace.
  * @private
  */
-Blockly.Flyout.prototype.placeNewBlock_ = function(event, old_block) {
+Blockly.Flyout.prototype.placeNewBlock_ = function (event, old_block) {
     const main_workspace = this.targetWorkspace_;
     const svg_root_old = old_block.getSvgRoot();
 
@@ -98,8 +103,8 @@ Blockly.Flyout.prototype.placeNewBlock_ = function(event, old_block) {
         const toolbar_height = 56;
         const header_height = 48;
         const old_block_pos_pixels = new goog.math.Coordinate(
-            event.clientX,
-            event.clientY - toolbar_height - header_height
+            event.clientX ? event.clientX : 0,
+            event.clientY ? event.clientY - toolbar_height - header_height : 0
         );
 
         // The position of the old block in pixels relative to the origin of the main workspace.

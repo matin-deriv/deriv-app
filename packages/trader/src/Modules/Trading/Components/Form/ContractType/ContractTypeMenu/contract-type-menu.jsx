@@ -1,223 +1,117 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { CSSTransition } from 'react-transition-group';
-import { VerticalTab, ThemedScrollbars } from '@deriv/components';
+import { Loading, ThemedScrollbars, VerticalTab } from '@deriv/components';
 import { localize } from '@deriv/translations';
 import SearchInput from './search-input.jsx';
 import NoResultsMessage from './no-results-message.jsx';
 import { Header } from '../ContractTypeInfo';
-import { getContractCategoryLabel, getContractsList, getFilteredList } from '../../../../Helpers/contract-type';
+import { getContractCategoryKey } from '../../../../Helpers/contract-type';
 
-class Dialog extends React.PureComponent {
-    dialog_ref = React.createRef();
-    input_ref = React.createRef();
-    scrollbar_ref = React.createRef();
-    vertical_tab_headers = [];
-    is_user_scroll = false;
-    scroll_timeout = null;
-    scrollTopPos = null;
+const Dialog = ({
+    categories,
+    item,
+    selected,
+    children,
+    is_info_dialog_open,
+    is_open,
+    onBackButtonClick,
+    onCategoryClick,
+    onChangeInput,
+    show_loading,
+}) => {
+    const input_ref = React.useRef(null);
 
-    state = {
-        is_filtered_list_empty: false,
-        selected: this.contract_category,
-        value: this.props.item.value,
-        input_value: '',
+    const [input_value, setInputValue] = React.useState('');
+
+    const contract_category = getContractCategoryKey(categories, item);
+    const selected_item = selected ? { key: selected } : contract_category;
+    const selected_category_contract = !categories?.find(category => category.key === selected_item.key)
+        ?.contract_categories.length;
+
+    const onChange = e => {
+        if (is_info_dialog_open) {
+            onBackButtonClick();
+        }
+        if (input_value) {
+            onClickClearInput();
+        }
+        if (onCategoryClick) {
+            onCategoryClick(e);
+        }
     };
 
-    static getDerivedStateFromProps(props, state) {
-        if (props.is_info_dialog_open && props.item.value !== state.value) {
-            return {
-                selected: {
-                    label: getContractCategoryLabel(props.list, props.item),
-                    value: props.item.value,
-                },
-            };
-        }
-        if (!props.is_open && !props.is_info_dialog_open && state.selected !== null) {
-            return {
-                selected: null, // reset selected header when dialog is closed
-            };
-        }
-        return null;
-    }
-
-    componentDidUpdate() {
-        if (this.props.is_open) {
-            if (!this.vertical_tab_headers.length) {
-                this.vertical_tab_headers = this.getVerticalTabHeaders();
-            }
-            if (this.scrollbar_ref.current && !this.is_user_scroll && this.should_scroll) {
-                this.scroll();
-            }
-        }
-    }
-
-    onChange = e => {
-        if (this.props.is_info_dialog_open) {
-            this.props.onBackButtonClick();
-        }
-        if (this.state.input_value) {
-            this.onClickClearInput();
-        }
-        this.setState({
-            selected: e,
-        });
+    const onChangeInputValue = e => {
+        setInputValue(e.target.value);
+        onChangeInput(e.target.value);
     };
 
-    onScroll = e => {
-        this.is_user_scroll = true;
-        const offset_top = e.target.scrollTop + 20; // add 20px of padding top and bottom
-        const closest = this.vertical_tab_headers.reduce((prev, curr) => (curr.offset_top < offset_top ? curr : prev));
-        if (closest !== -1) {
-            this.setState({
-                selected: {
-                    label: closest.label,
-                },
-            });
+    const onClickClearInput = () => {
+        input_ref.current.focus();
+        setInputValue('');
+        onChangeInput('');
+    };
+    const renderChildren = () => {
+        if (!is_info_dialog_open) {
+            return <ThemedScrollbars height='calc(100vh - 172px)'>{children}</ThemedScrollbars>;
         }
-
-        const element = e.target;
-        this.scrollTopPos = element.scrollTop;
-        if (this.scrollTopPos === element.scrollTop) {
-            clearTimeout(this.scroll_timeout);
-        }
-        this.scroll_timeout = setTimeout(() => {
-            this.is_user_scroll = false;
-        }, 150);
+        return children;
     };
+    const action_bar_items = is_info_dialog_open ? (
+        <Header title={item.text} onClickGoBack={onBackButtonClick} />
+    ) : (
+        <SearchInput
+            ref={input_ref}
+            onChange={onChangeInputValue}
+            onClickClearInput={onClickClearInput}
+            value={input_value}
+        />
+    );
 
-    onChangeInput = e => {
-        this.is_user_scroll = true; // set to true to prevent calling this.scroll() when input changes
-        this.setState({
-            input_value: e.target.value,
-        });
-        const filtered_items = this.contracts_list.filter(item => item.indexOf(e.target.value.toLowerCase()) !== -1);
-        this.filterList(filtered_items);
-    };
-
-    onClickClearInput = () => {
-        this.input_ref.current.focus();
-        this.setState({
-            input_value: '',
-            selected: null,
-        });
-        this.filterList(this.contracts_list);
-    };
-
-    filterList = filtered_items => {
-        const filtered_list = getFilteredList(this.props.list, filtered_items);
-        this.props.onChangeInput(filtered_list);
-        this.setState({
-            is_filtered_list_empty: !filtered_list.length,
-            selected: filtered_list[0],
-        });
-    };
-
-    getVerticalTabHeaders = () => {
-        const { current } = this.dialog_ref;
-        const headers = current.querySelectorAll('.dc-vertical-tab__header');
-        const list_labels = current.querySelectorAll('.contract-type-list__label');
-
-        return [...list_labels].map((label, i) => ({
-            label: label.innerText,
-            offset_top: label.offsetTop - headers[i].offsetTop + 40,
-        }));
-    };
-
-    scroll() {
-        this.scrollbar_ref.current.scrollTo({ top: this.offset_top, behavior: 'smooth' }); // scroll to selected contract category label
-    }
-
-    get contracts_list() {
-        return getContractsList(this.props.list);
-    }
-
-    get contract_category() {
-        const { list, item } = this.props;
-        const label = getContractCategoryLabel(list, item);
-
-        return {
-            label,
-        };
-    }
-
-    get selected() {
-        return this.state.selected || this.contract_category;
-    }
-
-    get offset_top() {
-        return this.vertical_tab_headers.find(header => header.label === this.selected.label).offset_top;
-    }
-
-    get should_scroll() {
-        if (!this.state.selected) return true;
-        return this.offset_top !== Math.ceil(this.scrollbar_ref.current.scrollTop);
-    }
-
-    render() {
-        const { children, is_info_dialog_open, is_open, item, list, onBackButtonClick } = this.props;
-
-        const action_bar_items = is_info_dialog_open ? (
-            <Header title={item.text} onClickGoBack={onBackButtonClick} />
-        ) : (
-            <SearchInput
-                ref={this.input_ref}
-                onChange={this.onChangeInput}
-                onClickClearInput={this.onClickClearInput}
-                value={this.state.input_value}
-            />
-        );
-
-        return (
-            <CSSTransition
-                in={is_open}
-                timeout={100}
-                classNames={{
-                    enter: 'contract-type-dialog--enter',
-                    enterDone: 'contract-type-dialog--enterDone',
-                    exit: 'contract-type-dialog--exit',
-                }}
-                unmountOnExit
-            >
-                <div className='contract-type-dialog'>
-                    <div ref={this.dialog_ref} className='contract-type-dialog__wrapper'>
+    return (
+        <CSSTransition
+            in={is_open}
+            timeout={100}
+            classNames={{
+                enter: 'contract-type-dialog--enter',
+                enterDone: 'contract-type-dialog--enterDone',
+                exit: 'contract-type-dialog--exit',
+            }}
+            unmountOnExit
+        >
+            <div className='contract-type-dialog' data-testid='contract_wrapper'>
+                <div className='contract-type-dialog__wrapper'>
+                    {show_loading ? (
+                        <Loading is_fullscreen={false} />
+                    ) : (
                         <VerticalTab.Layout>
                             <VerticalTab.Headers
                                 header_title={localize('Trade types')}
-                                items={list}
-                                selected={this.selected}
-                                onChange={this.onChange}
+                                items={categories}
+                                selected={selected_item}
+                                onChange={onChange}
+                                selectedKey='key'
                             />
+
                             <div className='dc-vertical-tab__content'>
                                 <div className='dc-vertical-tab__action-bar'>{action_bar_items}</div>
                                 <div className='dc-vertical-tab__content-container'>
-                                    {this.state.is_filtered_list_empty && (
-                                        <NoResultsMessage text={this.state.input_value} />
-                                    )}
-                                    {!is_info_dialog_open ? (
-                                        <ThemedScrollbars
-                                            refSetter={this.scrollbar_ref}
-                                            height='calc(100vh - 172px)'
-                                            onScroll={this.onScroll}
-                                        >
-                                            {children}
-                                        </ThemedScrollbars>
-                                    ) : (
-                                        children
-                                    )}
+                                    {selected_category_contract && <NoResultsMessage text={input_value} />}
+                                    {renderChildren()}
                                 </div>
                             </div>
                         </VerticalTab.Layout>
-                    </div>
+                    )}
                 </div>
-            </CSSTransition>
-        );
-    }
-}
+            </div>
+        </CSSTransition>
+    );
+};
 
 Dialog.propTypes = {
     is_info_dialog_open: PropTypes.bool,
     is_open: PropTypes.bool,
+    show_loading: PropTypes.bool,
     item: PropTypes.object,
     list: PropTypes.oneOfType([PropTypes.array, PropTypes.object]),
     onBackButtonClick: PropTypes.func,

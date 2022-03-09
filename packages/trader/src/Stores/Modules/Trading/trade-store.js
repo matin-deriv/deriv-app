@@ -1,25 +1,30 @@
 import debounce from 'lodash.debounce';
 import { action, computed, observable, reaction, runInAction, toJS, when } from 'mobx';
 import {
-    isDesktop,
-    isMobile,
-    isCryptocurrency,
-    getMinPayout,
     cloneObject,
-    isEmptyObject,
-    getPropertyValue,
     extractInfoFromShortcode,
+    getMinPayout,
+    getPropertyValue,
+    isCryptocurrency,
+    isDesktop,
+    isEmptyObject,
+    isMobile,
     showDigitalOptionsUnavailableError,
+    WS,
 } from '@deriv/shared';
-
 import { localize } from '@deriv/translations';
-import { WS } from 'Services/ws-methods';
 import { isDigitContractType, isDigitTradeType } from 'Modules/Trading/Helpers/digits';
 import ServerTime from '_common/base/server_time';
 import { processPurchase } from './Actions/purchase';
 import * as Symbol from './Actions/symbol';
 import getValidationRules, { getMultiplierValidationRules } from './Constants/validation-rules';
-import { pickDefaultSymbol, showUnavailableLocationError, isMarketClosed } from './Helpers/active-symbols';
+import {
+    pickDefaultSymbol,
+    showUnavailableLocationError,
+    isMarketClosed,
+    findFirstOpenMarket,
+    showMxMltUnavailableError,
+} from './Helpers/active-symbols';
 import ContractType from './Helpers/contract-type';
 import { convertDurationLimit, resetEndTimeOnVolatilityIndices } from './Helpers/duration';
 import { processTradeParams } from './Helpers/process';
@@ -40,13 +45,13 @@ export default class TradeStore extends BaseStore {
     @observable is_purchase_enabled = false;
     @observable is_trade_enabled = false;
     @observable is_equal = 0;
+    @observable has_equals_only = false;
 
     // Underlying
     @observable symbol;
     @observable is_market_closed = false;
     @observable previous_symbol = '';
     @observable active_symbols = [];
-    @observable should_refresh_active_symbols = false;
 
     @observable form_components = [];
 
@@ -105,6 +110,7 @@ export default class TradeStore extends BaseStore {
 
     // Chart loader observables
     @observable is_chart_loading;
+    @observable should_show_active_symbols_loading = false;
 
     // Multiplier trade params
     @observable multiplier;
@@ -116,6 +122,8 @@ export default class TradeStore extends BaseStore {
     @observable has_cancellation = false;
     @observable commission;
     @observable cancellation_price;
+    @observable stop_out;
+    @observable expiration;
     @observable hovered_contract_type;
     @observable cancellation_duration = '60m';
     @observable cancellation_range_list = [];
@@ -126,28 +134,17 @@ export default class TradeStore extends BaseStore {
     addTickByProposal = () => null;
     debouncedProposal = debounce(this.requestProposal, 500);
     proposal_requests = {};
+    is_purchasing_contract = false;
 
     initial_barriers;
     is_initial_barrier_applied = false;
 
     @observable should_skip_prepost_lifecycle = false;
 
-    @action.bound
-    init = async () => {
-        // To be sure that the website_status response has been received before processing trading page.
-        await WS.wait('authorize', 'website_status');
-        // This is to wait when the client is logging in via OAuth redirect
-        await when(() => !this.root_store.client.is_populating_account_list);
-        WS.storage.activeSymbols('brief').then(({ active_symbols }) => {
-            runInAction(() => {
-                this.active_symbols = active_symbols;
-            });
-        });
-    };
-
     constructor({ root_store }) {
         const local_storage_properties = [
             'amount',
+            'currency',
             'barrier_1',
             'barrier_2',
             'basis',
@@ -216,6 +213,20 @@ export default class TradeStore extends BaseStore {
                 }
             }
         );
+        reaction(
+            () => [this.contract_type],
+            () => {
+                if (this.contract_type === 'multiplier') {
+                    // when switching back to Multiplier contract, re-apply Stop loss / Take profit validation rules
+                    Object.assign(this.validation_rules, getMultiplierValidationRules());
+                } else {
+                    // we need to remove these two validation rules on contract_type change
+                    // to be able to remove any existing Stop loss / Take profit validation errors
+                    delete this.validation_rules.stop_loss;
+                    delete this.validation_rules.take_profit;
+                }
+            }
+        );
     }
 
     @computed
@@ -230,10 +241,6 @@ export default class TradeStore extends BaseStore {
         if (!!should_skip !== !!this.should_skip_prepost_lifecycle) {
             // to skip assignment if no change is made
             this.should_skip_prepost_lifecycle = should_skip;
-
-            if (!should_skip) {
-                this.onUnmount();
-            }
         }
     }
 
@@ -256,8 +263,28 @@ export default class TradeStore extends BaseStore {
     };
 
     @action.bound
+    async loadActiveSymbols(should_set_default_symbol = true, should_show_loading = true) {
+        this.should_show_active_symbols_loading = should_show_loading;
+
+        await this.setActiveSymbols();
+        if (should_set_default_symbol) await this.setDefaultSymbol();
+
+        const r = await WS.storage.contractsFor(this.symbol);
+        if (['InvalidSymbol', 'InputValidationFailed'].includes(r.error?.code)) {
+            const symbol_to_update = await pickDefaultSymbol(this.active_symbols);
+            await this.processNewValuesAsync({ symbol: symbol_to_update });
+        }
+
+        runInAction(() => {
+            this.should_show_active_symbols_loading = false;
+        });
+    }
+
+    @action.bound
     async setDefaultSymbol() {
         if (!this.is_symbol_in_active_symbols) {
+            this.is_trade_enabled = false;
+
             const symbol = await pickDefaultSymbol(this.active_symbols);
             await this.processNewValuesAsync({ symbol });
         }
@@ -265,20 +292,54 @@ export default class TradeStore extends BaseStore {
 
     @action.bound
     async setActiveSymbols() {
-        const { active_symbols, error } = this.should_refresh_active_symbols
-            ? // if SmartCharts has requested active_symbols, we wait for the response
-              await WS.wait('active_symbols')
-            : // else requests new active_symbols
-              await WS.authorized.activeSymbols();
+        const is_on_mf_account = this.root_store.client.landing_company_shortcode === 'maltainvest';
+        const hide_close_mx_mlt_storage_flag = !!parseInt(
+            localStorage.getItem('hide_close_mx_mlt_account_notification')
+        );
+        const is_logged_in = this.root_store.client.is_logged_in;
+        const clients_country = this.root_store.client.clients_country;
+        const showError = this.root_store.common.showError;
+        const setError = this.root_store.common.setError;
+
+        // To resolve infinite load for Belgium and Isle of man logout IPs
+        if (['be', 'im'].includes(clients_country) && !is_logged_in) {
+            showUnavailableLocationError(showError, is_logged_in);
+        }
+
+        const { active_symbols, error } = await WS.authorized.activeSymbols();
+
         if (error) {
-            this.root_store.common.showError({ message: localize('Trading is unavailable at this time.') });
+            showError({ message: localize('Trading is unavailable at this time.') });
             return;
-        } else if (!active_symbols || !active_symbols.length) {
-            if (this.root_store.client.landing_company_shortcode !== 'maltainvest') {
-                showUnavailableLocationError(this.root_store.common.showError, this.root_store.client.is_logged_in);
+        }
+
+        if (!active_symbols || !active_symbols.length) {
+            await WS.wait('get_settings');
+            /*
+             * This logic is related to EU country checks
+             * Avoid moving this upward in the scope since mobx will lose reactivity
+             */
+            const can_have_mx_account = this.root_store.client.can_have_mx_account;
+            const can_have_mlt_account = this.root_store.client.can_have_mlt_account;
+            const can_have_mlt_or_mx_account = can_have_mlt_account || can_have_mx_account;
+
+            if (can_have_mlt_or_mx_account && is_logged_in && !hide_close_mx_mlt_storage_flag) {
+                setError(true, {
+                    type: 'mx_mlt_removal',
+                });
+            } else if (is_logged_in && hide_close_mx_mlt_storage_flag) {
+                showMxMltUnavailableError(showError, can_have_mlt_account, can_have_mx_account);
+            } else if (!is_on_mf_account) {
+                if (!hide_close_mx_mlt_storage_flag) {
+                    setError(true, {
+                        type: 'mx_mlt_removal',
+                    });
+                } else {
+                    showUnavailableLocationError(showError, is_logged_in);
+                }
                 return;
-            } else if (this.root_store.client.landing_company_shortcode === 'maltainvest') {
-                showDigitalOptionsUnavailableError(this.root_store.common.showError, {
+            } else if (is_on_mf_account) {
+                showDigitalOptionsUnavailableError(showError, {
                     text: localize(
                         'We’re working to have this available for you soon. If you have another account, switch to that account to continue trading. You may add a DMT5 Financial.'
                     ),
@@ -288,7 +349,7 @@ export default class TradeStore extends BaseStore {
                 return;
             }
         }
-        this.processNewValuesAsync({ active_symbols });
+        await this.processNewValuesAsync({ active_symbols });
     }
 
     @action.bound
@@ -304,22 +365,29 @@ export default class TradeStore extends BaseStore {
                 this.processNewValuesAsync(ContractType.getContractValues(this));
             });
         }
+        this.root_store.common.setSelectedContractType(this.contract_type);
     }
 
     @action.bound
-    async prepareTradeStore() {
-        // fallback to default currency if current logged-in client hasn't selected a currency yet
-        this.currency = this.root_store.client.currency || this.root_store.client.default_currency;
+    async prepareTradeStore(should_set_default_symbol = true) {
         this.initial_barriers = { barrier_1: this.barrier_1, barrier_2: this.barrier_2 };
         await when(() => !this.root_store.client.is_populating_account_list);
-        await this.setActiveSymbols();
-        const r = await WS.storage.contractsFor(this.symbol);
-        if (['InvalidSymbol', 'InputValidationFailed'].includes(r.error?.code)) {
-            const symbol_to_update = await pickDefaultSymbol(this.active_symbols);
-            await this.processNewValuesAsync({ symbol: symbol_to_update });
-        }
 
-        await this.setDefaultSymbol();
+        // waits for `website_status` in order to set `stake_default` for the selected currency
+        await WS.wait('website_status');
+        await runInAction(async () => {
+            await this.processNewValuesAsync(
+                {
+                    // fallback to default currency if current logged-in client hasn't selected a currency yet
+                    currency: this.root_store.client.currency || this.root_store.client.default_currency,
+                },
+                true,
+                null,
+                false
+            );
+        });
+
+        await this.loadActiveSymbols(should_set_default_symbol);
         await this.setContractTypes();
         await this.processNewValuesAsync(
             {
@@ -350,6 +418,8 @@ export default class TradeStore extends BaseStore {
         if (name === 'symbol' && value) {
             // set trade params skeleton and chart loader to true until processNewValuesAsync resolves
             this.setChartStatus(true);
+            // reset market close status
+            this.setMarketStatus(false);
             this.is_trade_enabled = false;
             // this.root_store.modules.contract_trade.contracts = [];
             // TODO: Clear the contracts in contract-trade-store
@@ -371,6 +441,7 @@ export default class TradeStore extends BaseStore {
             true
         ); // wait for store to be updated
         this.validateAllProperties(); // then run validation before sending proposal
+        this.root_store.common.setSelectedContractType(this.contract_type);
     }
 
     @action.bound
@@ -498,14 +569,9 @@ export default class TradeStore extends BaseStore {
         if (isBarrierSupported(contract_type)) {
             const color = this.root_store.ui.is_dark_mode_on ? BARRIER_COLORS.DARK_GRAY : BARRIER_COLORS.GRAY;
             // create barrier only when it's available in response
-            const main_barrier = new ChartBarrierStore(
-                barrier || high_barrier,
-                low_barrier,
-                this.onChartBarrierChange,
-                { color }
-            );
-
-            this.main_barrier = main_barrier;
+            this.main_barrier = new ChartBarrierStore(barrier || high_barrier, low_barrier, this.onChartBarrierChange, {
+                color,
+            });
             // this.main_barrier.updateBarrierShade(true, contract_type);
         } else {
             this.main_barrier = null;
@@ -513,18 +579,46 @@ export default class TradeStore extends BaseStore {
     };
 
     @action.bound
-    onPurchase(proposal_id, price, type) {
+    onPurchase = debounce(this.processPurchase, 300);
+
+    @action.bound
+    processPurchase(proposal_id, price, type) {
         if (!this.is_purchase_enabled) return;
         if (proposal_id) {
             this.is_purchase_enabled = false;
+            this.is_purchasing_contract = true;
             const is_tick_contract = this.duration_unit === 't';
             processPurchase(proposal_id, price).then(
                 action(response => {
-                    const last_digit = +this.last_digit;
-                    if (this.proposal_info[type]?.id !== proposal_id) {
-                        throw new Error('Proposal ID does not match.');
+                    if (!this.is_trade_component_mounted) {
+                        this.enablePurchase();
+                        this.is_purchasing_contract = false;
+                        return;
                     }
-                    if (response.buy) {
+
+                    const last_digit = +this.last_digit;
+                    if (response.error) {
+                        // using javascript to disable purchase-buttons manually to compensate for mobx lag
+                        this.disablePurchaseButtons();
+                        // invalidToken error will handle in socket-general.js
+                        if (response.error.code !== 'InvalidToken') {
+                            this.root_store.common.setServicesError({
+                                type: response.msg_type,
+                                ...response.error,
+                            });
+
+                            // Clear purchase info on mobile after toast box error disappears (mobile_toast_timeout = 3500)
+                            if (isMobile() && this.root_store.common?.services_error?.type === 'buy') {
+                                setTimeout(() => {
+                                    this.clearPurchaseInfo();
+                                    this.requestProposal();
+                                }, 3500);
+                            }
+                        }
+                    } else if (response.buy) {
+                        if (this.proposal_info[type] && this.proposal_info[type].id !== proposal_id) {
+                            throw new Error('Proposal ID does not match.');
+                        }
                         const contract_data = {
                             ...this.proposal_requests[type],
                             ...this.proposal_info[type],
@@ -572,22 +666,14 @@ export default class TradeStore extends BaseStore {
                             this.debouncedProposal();
                             this.clearLimitOrderBarriers();
                             this.pushPurchaseDataToGtm(contract_data);
+                            this.is_purchasing_contract = false;
                             return;
-                        }
-                    } else if (response.error) {
-                        // using javascript to disable purchase-buttons manually to compensate for mobx lag
-                        this.disablePurchaseButtons();
-                        // invalidToken error will handle in socket-general.js
-                        if (response.error.code !== 'InvalidToken') {
-                            this.root_store.common.setServicesError({
-                                type: response.msg_type,
-                                ...response.error,
-                            });
                         }
                     }
                     this.forgetAllProposal();
                     this.purchase_info = response;
                     this.enablePurchase();
+                    this.is_purchasing_contract = false;
                 })
             );
         }
@@ -618,7 +704,7 @@ export default class TradeStore extends BaseStore {
      */
     @action.bound
     updateStore(new_state) {
-        Object.keys(cloneObject(new_state)).forEach(key => {
+        Object.keys(cloneObject(new_state) || {}).forEach(key => {
             if (key === 'root_store' || ['validation_rules', 'validation_errors', 'currency'].indexOf(key) > -1) return;
             if (JSON.stringify(this[key]) === JSON.stringify(new_state[key])) {
                 delete new_state[key];
@@ -650,6 +736,12 @@ export default class TradeStore extends BaseStore {
         obj_old_values = {},
         should_forget_first = true
     ) {
+        // To switch to rise_fall_equal contract type when allow equal is checked on first page refresh or
+        // when switch back to Rise/Fall from another contract type i.e.
+        if (obj_new_values.contract_type && obj_new_values.contract_type === 'rise_fall' && !!this.is_equal) {
+            obj_new_values.contract_type = 'rise_fall_equal';
+        }
+
         if (/\bduration\b/.test(Object.keys(obj_new_values))) {
             // TODO: fix this in input-field.jsx
             if (typeof obj_new_values.duration === 'string') {
@@ -663,15 +755,16 @@ export default class TradeStore extends BaseStore {
             this.proposal_requests = {};
         }
         if (is_changed_by_user && /\bcurrency\b/.test(Object.keys(obj_new_values))) {
-            const prev_currency =
-                obj_old_values && !isEmptyObject(obj_old_values) && obj_old_values.currency
-                    ? obj_old_values.currency
-                    : this.currency;
-            if (isCryptocurrency(obj_new_values.currency) !== isCryptocurrency(prev_currency)) {
-                obj_new_values.amount =
-                    is_changed_by_user && obj_new_values.amount
-                        ? obj_new_values.amount
-                        : getMinPayout(obj_new_values.currency);
+            const prev_currency = obj_old_values?.currency || this.currency;
+            const has_currency_changed = obj_new_values.currency !== prev_currency;
+
+            const should_reset_stake =
+                isCryptocurrency(obj_new_values.currency) ||
+                // For switch between fiat and crypto and vice versa
+                isCryptocurrency(obj_new_values.currency) !== isCryptocurrency(prev_currency);
+
+            if (has_currency_changed && should_reset_stake) {
+                obj_new_values.amount = obj_new_values.amount || getMinPayout(obj_new_values.currency);
             }
             this.currency = obj_new_values.currency;
         }
@@ -682,8 +775,8 @@ export default class TradeStore extends BaseStore {
             this.setPreviousSymbol(this.symbol);
             await Symbol.onChangeSymbolAsync(obj_new_values.symbol);
             this.setMarketStatus(isMarketClosed(this.active_symbols, obj_new_values.symbol));
-            has_only_forward_starting_contracts = ContractType.getContractCategories()
-                .has_only_forward_starting_contracts;
+            has_only_forward_starting_contracts =
+                ContractType.getContractCategories().has_only_forward_starting_contracts;
         }
         // TODO: remove all traces of setHasOnlyForwardingContracts and has_only_forward_starting_contracts in app
         //  once future contracts are implemented
@@ -709,25 +802,11 @@ export default class TradeStore extends BaseStore {
                 }
             }
 
-            // [Multiplier validation rules]
-            if (obj_new_values?.contract_type !== 'multiplier' && obj_old_values?.contract_type === 'multiplier') {
-                // we need to remove these two validation rules on contract_type change
-                // to be able to remove any existing Stop loss / Take profit validation errors
-                delete this.validation_rules.stop_loss;
-                delete this.validation_rules.take_profit;
-            }
-            if (obj_new_values?.contract_type === 'multiplier' && obj_old_values?.contract_type !== 'multiplier') {
-                // when switching back to Multiplier contract, re-apply Stop loss / Take profit validation rules
-                Object.assign(this.validation_rules, getMultiplierValidationRules());
-            }
-
             // TODO: handle barrier updates on proposal api
             // const is_barrier_changed = 'barrier_1' in new_state || 'barrier_2' in new_state;
-            const snapshot = await processTradeParams(this, new_state);
-            snapshot.is_trade_enabled = true;
+            await processTradeParams(this, new_state);
 
             this.updateStore({
-                ...snapshot,
                 ...(!this.is_initial_barrier_applied ? this.initial_barriers : {}),
             });
             this.is_initial_barrier_applied = true;
@@ -737,6 +816,11 @@ export default class TradeStore extends BaseStore {
             }
             this.debouncedProposal();
         }
+    }
+
+    @computed
+    get is_synthetics_available() {
+        return !!this.active_symbols?.find(item => item.market === 'synthetic_index');
     }
 
     @computed
@@ -772,7 +856,6 @@ export default class TradeStore extends BaseStore {
             settings: {
                 theme: this.root_store.ui.is_dark_mode_on ? 'dark' : 'light',
                 positions_drawer: this.root_store.ui.is_positions_drawer_on ? 'open' : 'closed',
-                purchase_confirm: this.root_store.ui.is_purchase_confirm_on ? 'enabled' : 'disabled',
                 chart: {
                     toolbar_position: this.root_store.ui.is_chart_layout_default ? 'bottom' : 'left',
                     chart_asset_info: this.root_store.ui.is_chart_asset_info_visible ? 'visible' : 'hidden',
@@ -830,20 +913,28 @@ export default class TradeStore extends BaseStore {
         const prev_proposal_info = getPropertyValue(this.proposal_info, contract_type) || {};
         const obj_prev_contract_basis = getPropertyValue(prev_proposal_info, 'obj_contract_basis') || {};
 
+        // add/update expiration or date_expiry for crypto indices from proposal
+        const date_expiry = response.proposal?.date_expiry;
+
+        if (!response.error && !!date_expiry && this.is_crypto_multiplier) {
+            this.expiration = date_expiry;
+        }
+
         this.proposal_info = {
             ...this.proposal_info,
             [contract_type]: getProposalInfo(this, response, obj_prev_contract_basis),
         };
 
         if (this.is_multiplier && this.proposal_info && this.proposal_info.MULTUP) {
-            const { commission, cancellation } = this.proposal_info.MULTUP;
+            const { commission, cancellation, limit_order } = this.proposal_info.MULTUP;
             // commission and cancellation.ask_price is the same for MULTUP/MULTDOWN
             if (commission) {
                 this.commission = commission;
             }
             if (cancellation) {
-                this.cancellation_price = this.proposal_info.MULTUP.cancellation.ask_price;
+                this.cancellation_price = cancellation.ask_price;
             }
+            this.stop_out = limit_order?.stop_out?.order_amount;
         }
 
         if (!this.main_barrier || !(this.main_barrier.shade !== 'NONE_SINGLE')) {
@@ -875,11 +966,26 @@ export default class TradeStore extends BaseStore {
                     this.commission = commission_match[1];
                 }
             }
+
+            // Sometimes when we navigate fast, `forget_all` proposal is called immediately after proposal subscription calls.
+            // But, in the BE, `forget_all` proposal call is processed before the proposal subscriptions are registered. In this case, `forget_all` proposal doesn't forget the new subscriptions.
+            // So when we send new proposal subscription requests, we get `AlreadySubscribed` error.
+            // If we get an error message with code `AlreadySubscribed`, `forget_all` proposal will be called and all the existing subscriptions will be marked as complete in `deriv-api` and will subscribe to new proposals
+            if (response.error.code === 'AlreadySubscribed') {
+                this.refresh();
+
+                if (this.is_trade_component_mounted) {
+                    this.debouncedProposal();
+                }
+                return;
+            }
         } else {
             this.validateAllProperties();
         }
 
-        this.enablePurchase();
+        if (!this.is_purchasing_contract) {
+            this.enablePurchase();
+        }
     }
 
     @action.bound
@@ -932,18 +1038,8 @@ export default class TradeStore extends BaseStore {
 
     @action.bound
     async accountSwitcherListener() {
-        if (this.root_store.client.standpoint.maltainvest) {
-            const { active_symbols } = await WS.authorized.activeSymbols();
-            if (!active_symbols || !active_symbols.length) {
-                showDigitalOptionsUnavailableError(this.root_store.common.showError, {
-                    text: localize(
-                        'We’re working to have this available for you soon. If you have another account, switch to that account to continue trading. You may add a DMT5 Financial.'
-                    ),
-                    title: localize('DTrader is not available for this account'),
-                    link: localize('Go to DMT5 dashboard'),
-                });
-            }
-        }
+        await this.loadActiveSymbols(true, false);
+
         this.resetErrorServices();
         await this.setContractTypes();
         runInAction(async () => {
@@ -965,14 +1061,13 @@ export default class TradeStore extends BaseStore {
     }
 
     @action.bound
-    logoutListener() {
-        this.should_refresh_active_symbols = true;
+    async logoutListener() {
         this.clearContracts();
         this.refresh();
-        this.debouncedProposal();
         this.resetErrorServices();
-        this.setContractTypes();
-        return Promise.resolve();
+        await this.loadActiveSymbols();
+        await this.setContractTypes();
+        this.debouncedProposal();
     }
 
     @action.bound
@@ -1001,7 +1096,7 @@ export default class TradeStore extends BaseStore {
         if (this.is_trade_component_mounted && this.should_skip_prepost_lifecycle) {
             return;
         }
-
+        this.root_store.notifications.setShouldShowPopups(false);
         this.onPreSwitchAccount(this.preSwitchAccountListener);
         this.onSwitchAccount(this.accountSwitcherListener);
         this.onLogout(this.logoutListener);
@@ -1011,8 +1106,34 @@ export default class TradeStore extends BaseStore {
         this.setChartStatus(true);
         runInAction(async () => {
             this.is_trade_component_mounted = true;
-            this.prepareTradeStore();
+            await this.prepareTradeStore();
+            this.root_store.notifications.setShouldShowPopups(true);
         });
+        // TODO: remove this function when the closure of MX and MLT accounts is completed.
+        this.manageMxMltRemovalNotification();
+    }
+
+    @action.bound
+    manageMxMltRemovalNotification() {
+        const { addNotificationMessage, client_notifications, notification_messages, unmarkNotificationMessage } =
+            this.root_store.notifications;
+        const get_notification_messages = JSON.parse(localStorage.getItem('notification_messages'));
+        const { has_iom_account, has_malta_account, is_logged_in } = this.root_store.client;
+        unmarkNotificationMessage({ key: 'close_mx_mlt_account' });
+        if (get_notification_messages !== null && is_logged_in && (has_iom_account || has_malta_account)) {
+            when(
+                () => is_logged_in && notification_messages.length === 0,
+                () => {
+                    const hidden_close_account_notification =
+                        parseInt(localStorage.getItem('hide_close_mx_mlt_account_notification')) === 1;
+                    const should_retain_notification =
+                        (has_iom_account || has_malta_account) && !hidden_close_account_notification;
+                    if (should_retain_notification) {
+                        addNotificationMessage(client_notifications.close_mx_mlt_account);
+                    }
+                }
+            );
+        }
     }
 
     @action.bound
@@ -1045,11 +1166,9 @@ export default class TradeStore extends BaseStore {
         this.root_store.modules.contract_trade.onUnmount();
         this.refresh();
         this.resetErrorServices();
-        if (this.root_store.ui.is_notifications_visible) {
-            this.root_store.ui.toggleNotificationsModal();
+        if (this.root_store.notifications.is_notifications_visible) {
+            this.root_store.notifications.toggleNotificationsModal();
         }
-        // clear url query string
-        window.history.pushState(null, null, window.location.pathname);
         if (this.prev_chart_layout) {
             this.prev_chart_layout.is_used = false;
         }
@@ -1063,6 +1182,10 @@ export default class TradeStore extends BaseStore {
             layout = this.prev_chart_layout;
         }
         return layout;
+    }
+
+    get is_crypto_multiplier() {
+        return this.contract_type === 'multiplier' && /^cry/.test(this.symbol);
     }
 
     @action.bound
@@ -1110,14 +1233,26 @@ export default class TradeStore extends BaseStore {
             });
         }
         if (req.active_symbols) {
-            return this.should_refresh_active_symbols ? WS.activeSymbols('brief') : WS.wait('active_symbols');
+            return WS.activeSymbols('brief');
+        }
+        if (req.trading_times) {
+            return WS.tradingTimes(req.trading_times);
         }
         return WS.storage.send(req);
     };
 
     @action.bound
-    resetRefresh() {
-        this.should_refresh_active_symbols = false;
+    chartStateChange(state, option) {
+        const market_close_prop = 'isClosed';
+        switch (state) {
+            case 'MARKET_STATE_CHANGE':
+                if (option && market_close_prop in option) {
+                    if (this.is_trade_component_mounted && option[market_close_prop] !== this.is_market_closed)
+                        this.prepareTradeStore(false);
+                }
+                break;
+            default:
+        }
     }
 
     refToAddTick = ref => {
@@ -1132,5 +1267,18 @@ export default class TradeStore extends BaseStore {
     @computed
     get is_multiplier() {
         return this.contract_type === 'multiplier';
+    }
+
+    @action.bound
+    async getFirstOpenMarket(markets_to_search) {
+        if (this.active_symbols?.length) {
+            return findFirstOpenMarket(this.active_symbols, markets_to_search);
+        }
+        const { active_symbols, error } = await WS.authorized.activeSymbols();
+        if (error) {
+            this.root_store.common.showError({ message: localize('Trading is unavailable at this time.') });
+            return undefined;
+        }
+        return findFirstOpenMarket(active_symbols, markets_to_search);
     }
 }

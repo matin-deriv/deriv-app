@@ -4,29 +4,20 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { CSSTransition } from 'react-transition-group';
 import Icon from '../icon/icon.jsx';
+import Text from '../text/text.jsx';
 import Div100vhContainer from '../div100vh-container';
 
 const MobileDialog = props => {
-    const {
-        title,
-        visible,
-        children,
-        has_full_height,
-        portal_element_id,
-        renderTitle,
-        wrapper_classname,
-        footer,
-    } = props;
+    const { title, visible, children, has_full_height, portal_element_id, renderTitle, wrapper_classname, footer } =
+        props;
 
     const footer_ref = React.useRef(false);
     const [footer_height, setHeight] = React.useState(0);
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
         if (footer_ref.current && !footer_height) {
             setHeight(footer_ref.current.offsetHeight);
-        } else {
-            footer_ref.current = true;
         }
-    }, [footer]);
+    }, [footer, footer_height]);
 
     const checkVisibility = () => {
         if (props.visible) {
@@ -82,7 +73,16 @@ const MobileDialog = props => {
                     height_offset={props.content_height_offset || '8px'}
                 >
                     <div className='dc-mobile-dialog__header'>
-                        <h2 className='dc-mobile-dialog__title'>{renderTitle ? renderTitle() : title}</h2>
+                        <Text
+                            as='h2'
+                            size='xs'
+                            color='prominent'
+                            weight='bold'
+                            line_height='unset'
+                            className='dc-mobile-dialog__title'
+                        >
+                            {renderTitle ? renderTitle() : title}
+                        </Text>
                         <div className='icons dc-btn-close dc-mobile-dialog__close-btn' onClick={props.onClose}>
                             <Icon icon='IcCross' className='dc-mobile-dialog__close-btn-icon' />
                         </div>

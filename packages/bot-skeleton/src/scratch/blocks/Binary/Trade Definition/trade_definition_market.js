@@ -57,13 +57,17 @@ Blockly.Blocks.trade_definition_market = {
         const submarket = submarket_dropdown.getValue();
         const symbol = symbol_dropdown.getValue();
 
+        // Temporary solution to remove Crytocurrencies from
+        // market options until multipliers are available for DBot
+        const market_options = active_symbols
+            .getMarketDropdownOptions()
+            .filter(option => option[1] !== 'cryptocurrency');
+
         const populateMarketDropdown = () => {
-            active_symbols.getMarketDropdownOptions().then(market_options => {
-                market_dropdown.updateOptions(market_options, {
-                    default_value: market,
-                    should_pretend_empty: true,
-                    event_group: event.group,
-                });
+            market_dropdown.updateOptions(market_options, {
+                default_value: market,
+                should_pretend_empty: true,
+                event_group: event.group,
             });
         };
 
@@ -71,20 +75,16 @@ Blockly.Blocks.trade_definition_market = {
             populateMarketDropdown();
         } else if (event.type === Blockly.Events.BLOCK_CHANGE && event.blockId === this.id) {
             if (event.name === 'MARKET_LIST') {
-                active_symbols.getSubmarketDropdownOptions(market).then(submarket_options => {
-                    submarket_dropdown.updateOptions(submarket_options, {
-                        default_value: submarket,
-                        should_pretend_empty: true,
-                        event_group: event.group,
-                    });
+                submarket_dropdown.updateOptions(active_symbols.getSubmarketDropdownOptions(market), {
+                    default_value: submarket,
+                    should_pretend_empty: true,
+                    event_group: event.group,
                 });
             } else if (event.name === 'SUBMARKET_LIST') {
-                active_symbols.getSymbolDropdownOptions(submarket).then(symbol_options => {
-                    symbol_dropdown.updateOptions(symbol_options, {
-                        default_value: symbol,
-                        should_pretend_empty: true,
-                        event_group: event.group,
-                    });
+                symbol_dropdown.updateOptions(active_symbols.getSymbolDropdownOptions(submarket), {
+                    default_value: symbol,
+                    should_pretend_empty: true,
+                    event_group: event.group,
                 });
             }
         } else if (event.type === Blockly.Events.END_DRAG && event.blockId === this.getRootBlock().id) {

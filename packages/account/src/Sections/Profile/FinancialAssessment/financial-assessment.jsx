@@ -1,7 +1,8 @@
 import classNames from 'classnames';
 import React from 'react';
+import { PropTypes } from 'prop-types';
 import { Formik } from 'formik';
-import { withRouter } from 'react-router';
+import { useHistory, withRouter } from 'react-router';
 import {
     FormSubmitErrorMessage,
     Loading,
@@ -12,17 +13,17 @@ import {
     DesktopWrapper,
     MobileWrapper,
     SelectNative,
+    Text,
 } from '@deriv/components';
-import { routes, isMobile, isDesktop } from '@deriv/shared';
-
+import { routes, isMobile, isDesktop, platforms, PlatformContext, WS } from '@deriv/shared';
 import { localize, Localize } from '@deriv/translations';
 import { connect } from 'Stores/connect';
-import { WS } from 'Services/ws-methods';
 import LeaveConfirm from 'Components/leave-confirm';
 import IconMessageContent from 'Components/icon-message-content';
 import DemoMessage from 'Components/demo-message';
 import LoadErrorMessage from 'Components/load-error-message';
 import FormBody from 'Components/form-body';
+import FormBodySection from 'Components/form-body-section';
 import FormSubHeader from 'Components/form-sub-header';
 import FormFooter from 'Components/form-footer';
 import {
@@ -48,7 +49,7 @@ import {
 const ConfirmationContent = ({ className }) => {
     return (
         <React.Fragment>
-            <p className={className}>
+            <Text as='p' size='xs' className={className}>
                 <Localize
                     i18n_default_text='In providing our services to you, we are required to obtain information from you in order to assess whether a given product or service is appropriate for you (that is, whether you possess the experience and knowledge to understand the risks involved).<0/><1/>'
                     components={[<br key={0} />, <br key={1} />]}
@@ -58,7 +59,7 @@ const ConfirmationContent = ({ className }) => {
                     components={[<br key={0} />, <br key={1} />]}
                 />
                 <Localize i18n_default_text='By clicking Accept below and proceeding with the Account Opening you should note that you may be exposing yourself to risks (which may be significant, including the risk of loss of the entire sum invested) that you may not have the knowledge and experience to properly assess or mitigate.' />
-            </p>
+            </Text>
         </React.Fragment>
     );
 };
@@ -91,7 +92,14 @@ const ConfirmationModal = ({ is_visible, toggleModal, onSubmit }) => (
 
 const ConfirmationPage = ({ toggleModal, onSubmit }) => (
     <div className='account__confirmation-page'>
-        <span className='account__confirmation-page-title'>{localize('Notice')}</span>
+        <Text
+            size='xs'
+            weight='bold'
+            styles={{ color: 'var(--brand-red-coral)' }}
+            className='account__confirmation-page-title'
+        >
+            {localize('Notice')}
+        </Text>
         <ConfirmationContent className='account__confirmation-page-content' />
         <div className='account__confirmation-page-footer'>
             <Button large text={localize('Back')} onClick={() => toggleModal(false)} secondary />
@@ -108,10 +116,44 @@ const ConfirmationPage = ({ toggleModal, onSubmit }) => (
     </div>
 );
 
-const SubmittedPage = withRouter(({ history }) => {
+const SubmittedPage = ({ platform, routeBackInApp }) => {
+    const history = useHistory();
+
+    const onClickButton = () => {
+        if (platforms[platform].is_hard_redirect) {
+            window.location.href = platforms[platform].url;
+        } else {
+            routeBackInApp(history);
+        }
+    };
+
     const redirectToPOA = () => {
         history.push(routes.proof_of_address);
     };
+
+    if (platform && !!platforms[platform])
+        return (
+            <IconMessageContent
+                className='submit-success'
+                message={localize('Financial assessment submitted successfully')}
+                text={platforms[platform].icon_text}
+                icon={<Icon icon='IcSuccess' width={96} height={90} />}
+            >
+                <div className='account-management-flex-wrapper account-management-submit-success'>
+                    <Button
+                        type='button'
+                        has_effect
+                        text={localize('Back to {{platform_name}}', {
+                            platform_name: platforms[platform].platform_name,
+                        })}
+                        onClick={onClickButton}
+                        primary
+                        large
+                    />
+                </div>
+            </IconMessageContent>
+        );
+
     return (
         <IconMessageContent
             className='submit-success'
@@ -131,216 +173,204 @@ const SubmittedPage = withRouter(({ history }) => {
             </div>
         </IconMessageContent>
     );
-});
+};
 
-class FinancialAssessment extends React.Component {
-    is_mounted = false;
-    state = {
-        is_loading: true,
-        is_confirmation_visible: false,
-        has_trading_experience: false,
-        show_form: true,
-        income_source: '',
-        employment_status: '',
-        employment_industry: '',
-        occupation: '',
-        source_of_wealth: '',
-        education_level: '',
-        net_income: '',
-        estimated_worth: '',
-        account_turnover: '',
-        binary_options_trading_experience: '',
-        binary_options_trading_frequency: '',
-        cfd_trading_experience: '',
-        cfd_trading_frequency: '',
-        forex_trading_experience: '',
-        forex_trading_frequency: '',
-        other_instruments_trading_experience: '',
-        other_instruments_trading_frequency: '',
-    };
+const FinancialAssessment = ({
+    is_authentication_needed,
+    is_financial_account,
+    is_svg,
+    is_trading_experience_incomplete,
+    is_virtual,
+    platform,
+    removeNotificationByKey,
+    removeNotificationMessage,
+    routeBackInApp,
+}) => {
+    const history = useHistory();
+    const { is_appstore } = React.useContext(PlatformContext);
+    const [is_loading, setIsLoading] = React.useState(true);
+    const [is_confirmation_visible, setIsConfirmationVisible] = React.useState(false);
+    const [has_trading_experience, setHasTradingExperience] = React.useState(false);
+    const [is_form_visible, setIsFormVisible] = React.useState(true);
+    const [api_initial_load_error, setApiInitialLoadError] = React.useState(null);
+    const [is_btn_loading, setIsBtnLoading] = React.useState(false);
+    const [is_submit_success, setIsSubmitSuccess] = React.useState(false);
+    const [initial_form_values, setInitialFormValues] = React.useState({});
+    const {
+        income_source,
+        employment_status,
+        employment_industry,
+        occupation,
+        source_of_wealth,
+        education_level,
+        net_income,
+        estimated_worth,
+        account_turnover,
+        binary_options_trading_experience,
+        binary_options_trading_frequency,
+        cfd_trading_experience,
+        cfd_trading_frequency,
+        forex_trading_experience,
+        forex_trading_frequency,
+        other_instruments_trading_experience,
+        other_instruments_trading_frequency,
+    } = initial_form_values;
 
-    componentDidMount() {
-        this.is_mounted = true;
-        if (this.props.is_virtual) {
-            this.setState({ is_loading: false });
+    React.useEffect(() => {
+        if (is_virtual) {
+            setIsLoading(false);
+            history.push(routes.personal_details);
         } else {
-            WS.authorized.storage.getFinancialAssessment().then((data) => {
-                // TODO: Find a better solution for handling no-op instead of using is_mounted flags
-                if (this.is_mounted) {
-                    WS.wait('get_account_status').then(() => {
-                        const mt5_session_storage = sessionStorage.getItem('open_mt5_account_type');
-                        const has_mt5_financial_session = /labuan_financial_stp|labuan_advanced/.test(
-                            mt5_session_storage
-                        );
-                        const has_trading_experience =
-                            (has_mt5_financial_session ||
-                                this.props.is_financial_account ||
-                                this.props.is_trading_experience_incomplete) &&
-                            !this.props.is_svg;
+            WS.authorized.storage.getFinancialAssessment().then(data => {
+                WS.wait('get_account_status').then(() => {
+                    setHasTradingExperience((is_financial_account || is_trading_experience_incomplete) && !is_svg);
+                    if (data.error) {
+                        setApiInitialLoadError(data.error.message);
+                        return;
+                    }
 
-                        const needs_financial_assessment =
-                            this.props.is_financial_information_incomplete ||
-                            this.props.is_high_risk ||
-                            has_trading_experience ||
-                            this.props.is_financial_account;
-                        this.setState({ has_trading_experience });
-
-                        if (data.error) {
-                            this.setState({ api_initial_load_error: data.error.message });
-                            return;
-                        } else if (!needs_financial_assessment) {
-                            // Additional layer of error handling if non high risk user somehow manages to reach FA page, need to define error to prevent app crash
-                            this.setState({
-                                api_initial_load_error: localize(
-                                    'Error: Could not load financial assessment information'
-                                ),
-                            });
-                        }
-                        this.setState({ ...data.get_financial_assessment, is_loading: false });
-                    });
-                }
+                    setInitialFormValues(data.get_financial_assessment);
+                    setIsLoading(false);
+                });
             });
         }
-    }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    componentWillUnmount() {
-        this.is_mounted = false;
-    }
-
-    onSubmit = (values, { setSubmitting, setStatus }) => {
+    const onSubmit = (values, { setSubmitting, setStatus }) => {
         setStatus({ msg: '' });
-        this.setState({ is_btn_loading: true });
-        WS.setFinancialAssessment(values).then((data) => {
-            this.setState({ is_btn_loading: false });
+        setIsBtnLoading(true);
+        WS.setFinancialAssessment(values).then(data => {
             if (data.error) {
+                setIsBtnLoading(false);
                 setStatus({ msg: data.error.message });
             } else {
-                this.setState({ is_submit_success: true });
-                setTimeout(() => this.setState({ is_submit_success: false }), 3000);
+                WS.authorized.storage.getFinancialAssessment().then(res_data => {
+                    setInitialFormValues(res_data.get_financial_assessment);
+                    setIsSubmitSuccess(true);
+                    setIsBtnLoading(false);
 
-                this.props.removeNotificationMessage({ key: 'risk' });
-                this.props.removeNotificationByKey({ key: 'risk' });
+                    if (isDesktop()) {
+                        setTimeout(() => setIsSubmitSuccess(false), 10000);
+                    }
+
+                    removeNotificationMessage({ key: 'risk' });
+                    removeNotificationByKey({ key: 'risk' });
+                });
             }
             setSubmitting(false);
         });
     };
 
-    validateFields = (values) => {
-        this.setState({ is_submit_success: false });
+    const validateFields = values => {
+        setIsSubmitSuccess(false);
         const errors = {};
-        Object.keys(values).forEach((field) => {
-            if (values[field] !== undefined && !values[field]) {
+        Object.keys(values).forEach(field => {
+            if (!values[field]) {
                 errors[field] = localize('This field is required');
             }
         });
         return errors;
     };
 
-    showForm = (show_form) => this.setState({ show_form, is_confirmation_visible: false });
-
-    toggleConfirmationModal = (value) => {
-        const new_state = { is_confirmation_visible: value };
-        if (isMobile()) {
-            new_state.show_form = !value;
-        }
-
-        this.setState(new_state);
+    const showForm = is_visible => {
+        setIsFormVisible(is_visible);
+        setIsConfirmationVisible(false);
     };
 
-    render() {
-        const {
-            api_initial_load_error,
-            income_source,
-            employment_status,
-            employment_industry,
-            occupation,
-            source_of_wealth,
-            education_level,
-            net_income,
-            estimated_worth,
-            account_turnover,
-            binary_options_trading_experience,
-            binary_options_trading_frequency,
-            cfd_trading_experience,
-            cfd_trading_frequency,
-            forex_trading_experience,
-            forex_trading_frequency,
-            other_instruments_trading_experience,
-            other_instruments_trading_frequency,
-            show_form,
-            is_loading,
-            is_btn_loading,
-            is_submit_success,
-            is_confirmation_visible,
-            has_trading_experience,
-        } = this.state;
+    const toggleConfirmationModal = value => {
+        setIsConfirmationVisible(value);
+        if (isMobile()) {
+            setIsFormVisible(!value);
+        }
+    };
 
-        if (is_loading) return <Loading is_fullscreen={false} className='account___intial-loader' />;
-        if (api_initial_load_error) return <LoadErrorMessage error_message={api_initial_load_error} />;
-        if (this.props.is_virtual) return <DemoMessage />;
-        if (isMobile() && is_submit_success) return <SubmittedPage />;
+    const onClickSubmit = handleSubmit => {
+        const is_confirmation_needed = has_trading_experience && is_trading_experience_incomplete;
 
-        return (
-            <React.Fragment>
-                <Formik
-                    initialValues={{
-                        income_source,
-                        employment_status,
-                        employment_industry,
-                        occupation,
-                        source_of_wealth,
-                        education_level,
-                        net_income,
-                        estimated_worth,
-                        account_turnover,
-                        ...(has_trading_experience && {
-                            binary_options_trading_experience,
-                            binary_options_trading_frequency,
-                            cfd_trading_experience,
-                            cfd_trading_frequency,
-                            forex_trading_experience,
-                            forex_trading_frequency,
-                            other_instruments_trading_experience,
-                            other_instruments_trading_frequency,
-                        }),
-                    }}
-                    validate={this.validateFields}
-                    onSubmit={this.onSubmit}
-                >
-                    {({
-                        values,
-                        errors,
-                        status,
-                        touched,
-                        handleChange,
-                        handleBlur,
-                        handleSubmit,
-                        isSubmitting,
-                        dirty,
-                        // validateField,
-                    }) => (
-                        <>
-                            {isMobile() && is_confirmation_visible && (
-                                <ConfirmationPage toggleModal={this.toggleConfirmationModal} onSubmit={handleSubmit} />
-                            )}
-                            {isDesktop() && (
-                                <ConfirmationModal
-                                    is_visible={is_confirmation_visible}
-                                    toggleModal={this.toggleConfirmationModal}
-                                    onSubmit={handleSubmit}
-                                />
-                            )}
-                            <LeaveConfirm onDirty={isMobile() ? this.showForm : null} />
-                            {show_form && (
-                                <form
-                                    className='account-form account-form__financial-assessment'
-                                    onSubmit={handleSubmit}
-                                >
-                                    <FormBody scroll_offset={isMobile() ? '200px' : '80px'}>
-                                        <FormSubHeader
-                                            title={localize('Financial information')}
-                                            subtitle={isDesktop() && `(${localize('All fields are required')})`}
-                                        />
+        if (is_confirmation_needed) {
+            toggleConfirmationModal(true);
+        } else {
+            handleSubmit();
+        }
+    };
+
+    const getScrollOffset = () => {
+        if (isMobile()) return is_appstore ? '160px' : '200px';
+        return '80px';
+    };
+
+    if (is_loading) return <Loading is_fullscreen={false} className='account__initial-loader' />;
+    if (api_initial_load_error) return <LoadErrorMessage error_message={api_initial_load_error} />;
+    if (is_virtual) return <DemoMessage has_demo_icon={is_appstore} has_button={is_appstore} />;
+    if (isMobile() && is_authentication_needed && is_submit_success)
+        return <SubmittedPage platform={platform} routeBackInApp={routeBackInApp} />;
+
+    return (
+        <React.Fragment>
+            <Formik
+                initialValues={{
+                    income_source,
+                    employment_status,
+                    employment_industry,
+                    occupation,
+                    source_of_wealth,
+                    education_level,
+                    net_income,
+                    estimated_worth,
+                    account_turnover,
+                    ...(has_trading_experience && {
+                        binary_options_trading_experience,
+                        binary_options_trading_frequency,
+                        cfd_trading_experience,
+                        cfd_trading_frequency,
+                        forex_trading_experience,
+                        forex_trading_frequency,
+                        other_instruments_trading_experience,
+                        other_instruments_trading_frequency,
+                    }),
+                }}
+                enableReinitialize
+                validate={validateFields}
+                onSubmit={onSubmit}
+            >
+                {({
+                    values,
+                    errors,
+                    status,
+                    touched,
+                    handleChange,
+                    handleBlur,
+                    handleSubmit,
+                    isSubmitting,
+                    setFieldTouched,
+                    dirty,
+                }) => (
+                    <>
+                        {!is_appstore && isMobile() && is_confirmation_visible && (
+                            <ConfirmationPage toggleModal={toggleConfirmationModal} onSubmit={handleSubmit} />
+                        )}
+                        {(isDesktop() || is_appstore) && (
+                            <ConfirmationModal
+                                is_visible={is_confirmation_visible}
+                                toggleModal={toggleConfirmationModal}
+                                onSubmit={handleSubmit}
+                            />
+                        )}
+                        <LeaveConfirm onDirty={isMobile() ? showForm : null} />
+                        {is_form_visible && (
+                            <form className='account-form account-form__financial-assessment' onSubmit={handleSubmit}>
+                                <FormBody scroll_offset={getScrollOffset()}>
+                                    <FormSubHeader
+                                        title={localize('Financial information')}
+                                        subtitle={`(${localize('All fields are required')})`}
+                                    />
+                                    <FormBodySection
+                                        has_side_note={is_appstore}
+                                        side_note={localize(
+                                            'We’re legally obliged to ask for your financial information.'
+                                        )}
+                                    >
                                         <fieldset className='account-form__fieldset'>
                                             <DesktopWrapper>
                                                 <Dropdown
@@ -362,7 +392,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getIncomeSourceList()}
                                                     value={values.income_source}
                                                     error={touched.income_source && errors.income_source}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('income_source', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -387,7 +420,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getEmploymentStatusList()}
                                                     value={values.employment_status}
                                                     error={touched.employment_status && errors.employment_status}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('employment_status', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -412,7 +448,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getEmploymentIndustryList()}
                                                     value={values.employment_industry}
                                                     error={touched.employment_industry && errors.employment_industry}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('employment_industry', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -438,7 +477,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getOccupationList()}
                                                     value={values.occupation}
                                                     error={touched.occupation && errors.occupation}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('occupation', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -463,7 +505,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getSourceOfWealthList()}
                                                     value={values.source_of_wealth}
                                                     error={touched.source_of_wealth && errors.source_of_wealth}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('source_of_wealth', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -488,7 +533,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getEducationLevelList()}
                                                     value={values.education_level}
                                                     error={touched.education_level && errors.education_level}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('education_level', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -513,7 +561,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getNetIncomeList()}
                                                     value={values.net_income}
                                                     error={touched.net_income && errors.net_income}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('net_income', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -539,7 +590,10 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getEstimatedWorthList()}
                                                     value={values.estimated_worth}
                                                     error={touched.estimated_worth && errors.estimated_worth}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('estimated_worth', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
@@ -565,17 +619,25 @@ class FinancialAssessment extends React.Component {
                                                     list_items={getAccountTurnoverList()}
                                                     value={values.account_turnover}
                                                     error={touched.account_turnover && errors.account_turnover}
-                                                    onChange={handleChange}
+                                                    onChange={e => {
+                                                        setFieldTouched('account_turnover', true);
+                                                        handleChange(e);
+                                                    }}
                                                 />
                                             </MobileWrapper>
                                         </fieldset>
                                         {/* Trading experience fieldset */}
-                                        {has_trading_experience && (
-                                            <>
-                                                <FormSubHeader
-                                                    title={localize('Trading experience')}
-                                                    subtitle={isDesktop() && `(${localize('All fields are required')})`}
-                                                />
+                                    </FormBodySection>
+                                    {has_trading_experience && (
+                                        <>
+                                            <FormSubHeader
+                                                title={localize('Trading experience')}
+                                                subtitle={`(${localize('All fields are required')})`}
+                                            />
+                                            <FormBodySection
+                                                has_side_note={is_appstore}
+                                                side_note={localize('Tell us about your trading experience.')}
+                                            >
                                                 <fieldset className='account-form__fieldset'>
                                                     <DesktopWrapper>
                                                         <Dropdown
@@ -603,7 +665,10 @@ class FinancialAssessment extends React.Component {
                                                                 touched.forex_trading_experience &&
                                                                 errors.forex_trading_experience
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched('forex_trading_experience', true);
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
@@ -634,7 +699,10 @@ class FinancialAssessment extends React.Component {
                                                                 touched.forex_trading_frequency &&
                                                                 errors.forex_trading_frequency
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched('forex_trading_frequency', true);
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
@@ -665,7 +733,13 @@ class FinancialAssessment extends React.Component {
                                                                 touched.binary_options_trading_experience &&
                                                                 errors.binary_options_trading_experience
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched(
+                                                                    'binary_options_trading_experience',
+                                                                    true
+                                                                );
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
@@ -696,7 +770,13 @@ class FinancialAssessment extends React.Component {
                                                                 touched.binary_options_trading_frequency &&
                                                                 errors.binary_options_trading_frequency
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched(
+                                                                    'binary_options_trading_frequency',
+                                                                    true
+                                                                );
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
@@ -727,7 +807,10 @@ class FinancialAssessment extends React.Component {
                                                                 touched.cfd_trading_experience &&
                                                                 errors.cfd_trading_experience
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched('cfd_trading_experience', true);
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
@@ -758,7 +841,10 @@ class FinancialAssessment extends React.Component {
                                                                 touched.cfd_trading_frequency &&
                                                                 errors.cfd_trading_frequency
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched('cfd_trading_frequency', true);
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
@@ -791,7 +877,13 @@ class FinancialAssessment extends React.Component {
                                                                 touched.other_instruments_trading_experience &&
                                                                 errors.other_instruments_trading_experience
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched(
+                                                                    'other_instruments_trading_experience',
+                                                                    true
+                                                                );
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
@@ -825,77 +917,77 @@ class FinancialAssessment extends React.Component {
                                                                 touched.other_instruments_trading_frequency &&
                                                                 errors.other_instruments_trading_frequency
                                                             }
-                                                            onChange={handleChange}
+                                                            onChange={e => {
+                                                                setFieldTouched(
+                                                                    'other_instruments_trading_frequency',
+                                                                    true
+                                                                );
+                                                                handleChange(e);
+                                                            }}
                                                         />
                                                     </MobileWrapper>
                                                 </fieldset>
-                                            </>
-                                        )}
-                                    </FormBody>
-                                    <FormFooter>
-                                        {status && status.msg && <FormSubmitErrorMessage message={status.msg} />}
-                                        {isMobile() && (
-                                            <span className='account-form__footer-all-fields-required'>
-                                                {localize('All fields are required')}
-                                            </span>
-                                        )}
-                                        <Button
-                                            type='button'
-                                            className={classNames('account-form__footer-btn', {
-                                                'dc-btn--green': is_submit_success,
-                                            })}
-                                            onClick={() => this.toggleConfirmationModal(true)}
-                                            is_disabled={
-                                                isSubmitting ||
-                                                !dirty ||
-                                                !!(
-                                                    errors.income_source ||
-                                                    !values.income_source ||
-                                                    errors.employment_status ||
-                                                    !values.employment_status ||
-                                                    errors.employment_industry ||
-                                                    !values.employment_industry ||
-                                                    errors.occupation ||
-                                                    !values.occupation ||
-                                                    errors.source_of_wealth ||
-                                                    !values.source_of_wealth ||
-                                                    errors.education_level ||
-                                                    !values.education_level ||
-                                                    errors.net_income ||
-                                                    !values.net_income ||
-                                                    errors.estimated_worth ||
-                                                    !values.estimated_worth ||
-                                                    errors.account_turnover ||
-                                                    !values.account_turnover
-                                                )
-                                            }
-                                            has_effect
-                                            is_loading={is_btn_loading}
-                                            is_submit_success={is_submit_success}
-                                            text={localize('Submit')}
-                                            primary
-                                            large
-                                        />
-                                    </FormFooter>
-                                </form>
-                            )}
-                        </>
-                    )}
-                </Formik>
-            </React.Fragment>
-        );
-    }
-}
+                                            </FormBodySection>
+                                        </>
+                                    )}
+                                </FormBody>
+                                <FormFooter>
+                                    {status && status.msg && <FormSubmitErrorMessage message={status.msg} />}
+                                    {isMobile() && !is_appstore && (
+                                        <Text
+                                            align='center'
+                                            size='xxs'
+                                            className='account-form__footer-all-fields-required'
+                                        >
+                                            {localize('All fields are required')}
+                                        </Text>
+                                    )}
+                                    <Button
+                                        type='button'
+                                        className={classNames('account-form__footer-btn', {
+                                            'dc-btn--green': is_submit_success,
+                                        })}
+                                        onClick={() => onClickSubmit(handleSubmit)}
+                                        is_disabled={
+                                            isSubmitting || !dirty || is_btn_loading || Object.keys(errors).length > 0
+                                        }
+                                        has_effect
+                                        is_loading={is_btn_loading}
+                                        is_submit_success={is_submit_success}
+                                        text={is_appstore ? localize('Save') : localize('Submit')}
+                                        large
+                                        primary
+                                    />
+                                </FormFooter>
+                            </form>
+                        )}
+                    </>
+                )}
+            </Formik>
+        </React.Fragment>
+    );
+};
 
-// FinancialAssessment.propTypes = {};
-export default connect(({ client, ui }) => ({
-    account_status: client.account_status,
-    is_virtual: client.is_virtual,
-    is_high_risk: client.is_high_risk,
+FinancialAssessment.propTypes = {
+    is_authentication_needed: PropTypes.bool,
+    is_financial_account: PropTypes.bool,
+    is_svg: PropTypes.bool,
+    is_trading_experience_incomplete: PropTypes.bool,
+    is_virtual: PropTypes.bool,
+    platform: PropTypes.string,
+    removeNotificationByKey: PropTypes.func,
+    removeNotificationMessage: PropTypes.func,
+    routeBackInApp: PropTypes.func,
+};
+
+export default connect(({ client, common, notifications }) => ({
+    is_authentication_needed: client.is_authentication_needed,
     is_financial_account: client.is_financial_account,
-    is_trading_experience_incomplete: client.is_trading_experience_incomplete,
-    is_financial_information_incomplete: client.is_financial_information_incomplete,
     is_svg: client.is_svg,
-    removeNotificationMessage: ui.removeNotificationMessage,
-    removeNotificationByKey: ui.removeNotificationByKey,
-}))(FinancialAssessment);
+    is_trading_experience_incomplete: client.is_trading_experience_incomplete,
+    is_virtual: client.is_virtual,
+    platform: common.platform,
+    removeNotificationByKey: notifications.removeNotificationByKey,
+    removeNotificationMessage: notifications.removeNotificationMessage,
+    routeBackInApp: common.routeBackInApp,
+}))(withRouter(FinancialAssessment));

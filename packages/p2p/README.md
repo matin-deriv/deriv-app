@@ -2,12 +2,13 @@
   @deriv/p2p
 </h1>
 
-## Index
+**In this document**
 
--   [General](docs/README.md) - Contains general philosophy and overview of this package
--   [Modules docs](docs/Modules/README.md) - Contains implementation guides (i.e., scaffolding, code usage)
+-   [Pre-installation](#pre-installation)
+-   [Editor helpers](#editor-helpers)
+-   [Quick start](#quick-start)
 
-## Requirements
+## Pre-installation
 
 -   node
 -   npm
@@ -18,7 +19,7 @@
 -   Stylelint setup in your editor https://stylelint.io/
 -   Eslint setup in your editor https://eslint.org/
 
-## 🚀 Quick start
+## Quick start
 
 1.  **Install your dependencies:**
 
@@ -69,9 +70,8 @@ Update translations in Crowdin and get new translations from Crowdin
 
 Requirements:
 
--   Crowdin CLI: https://support.crowdin.com/cli-tool-v2/#installation
--   **Important:** Please use version 2 of the crowdin cli-tool (version 3 is not supported by our translation scripts yet)
--   P2P_CROWDIN_API_KEY
+-   Crowdin CLI: https://support.crowdin.com/cli-tool/#installation
+-   `CROWDIN_API_KEY` environment variables to your `~/.bash_profile`
 
 1. Run the script below
 

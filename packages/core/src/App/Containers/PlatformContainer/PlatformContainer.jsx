@@ -1,18 +1,17 @@
 import React from 'react';
 import { PlatformContext } from '@deriv/shared';
 
-const DERIV_CRYPTO_KEY = 'is_deriv_crypto_app';
+const DERIV_APPSTORE_KEY = 'is_appstore';
 
 const PlatformContainer = ({ ...props }) => {
-    const is_crypto_app = window.localStorage.getItem('is_deriv_crypto_app')
-        ? window.localStorage.getItem('is_deriv_crypto_app') === 'true'
-        : process.env.IS_CRYPTO_APP;
-    const [deriv_crypto, setDerivCrypto] = React.useState(is_crypto_app);
+    // TODO: set is_appstore based on a flag from BE.
+    const is_appstore_storage = window.localStorage.getItem(DERIV_APPSTORE_KEY) === 'true';
+    const [is_appstore, setIsAppStore] = React.useState(is_appstore_storage);
 
     const platform_store = {
-        is_deriv_crypto: deriv_crypto,
-        setDerivCrypto,
-        DERIV_CRYPTO_KEY,
+        is_appstore,
+        setIsAppStore,
+        DERIV_APPSTORE_KEY,
     };
 
     return <PlatformContext.Provider value={platform_store} {...props} />;

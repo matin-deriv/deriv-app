@@ -52,6 +52,14 @@ export const config = {
         CURRENCY: ['USD', 'EUR', 'GBP', 'AUD', ...CRYPTO_CURRENCIES],
     },
     opposites: {
+        MULTIPLIER: [
+            {
+                MULTUP: localize('Up'),
+            },
+            {
+                MULTDOWN: localize('Down'),
+            },
+        ],
         CALLPUT: [
             {
                 CALL: localize('Rise'),
@@ -192,7 +200,7 @@ export const config = {
         [localize('1 day'), '86400'],
     ],
     mainBlocks: ['trade_definition', 'before_purchase', 'during_purchase', 'after_purchase'],
-    mandatoryMainBlocks: ['trade_definition', 'before_purchase'],
+    mandatoryMainBlocks: ['trade_definition', 'purchase', 'before_purchase'],
     procedureDefinitionBlocks: ['procedures_defnoreturn', 'procedures_defreturn'],
     single_instance_blocks: ['trade_definition', 'before_purchase', 'during_purchase', 'after_purchase'],
     TRADE_TYPE_TO_CONTRACT_CATEGORY_MAPPING: {
@@ -201,6 +209,7 @@ export const config = {
         digits: ['matchesdiffers', 'evenodd', 'overunder'],
     },
     TRADE_TYPE_CATEGORIES: {
+        multiplier: ['multiplier'],
         callput: ['callput', 'callputequal', 'higherlower'],
         touchnotouch: ['touchnotouch'],
         inout: ['endsinout', 'staysinout'],
@@ -221,11 +230,12 @@ export const config = {
         callputspread: localize('Call Spread/Put Spread'),
         highlowticks: localize('High/Low Ticks'),
         runs: localize('Only Ups/Only Downs'),
+        multiplier: localize('Multipliers'),
     },
     BARRIER_CATEGORIES: {
         euro_atm: ['callput', 'callputequal'],
         euro_non_atm: ['endsinout', 'higherlower', 'callputspread'],
-        american: ['staysinout', 'touchnotouch', 'highlowticks', 'runs'],
+        american: ['staysinout', 'touchnotouch', 'highlowticks', 'runs', 'multiplier'],
         non_financial: ['digits', 'overunder', 'evenodd', 'matchesdiffers'],
         asian: ['asians'],
         reset: ['reset'],
@@ -269,21 +279,21 @@ export const config = {
     strategies: {
         martingale: {
             index: 0,
-            label: 'Martingale',
+            label: localize('Martingale'),
             description: localize(
                 'The Martingale Strategy is a classic trading technique that has been used for more than a hundred years, popularised by the French mathematician Paul Pierre Levy in the 18th century.'
             ),
         },
         dalembert: {
             index: 1,
-            label: "D'Alembert",
+            label: localize("D'Alembert"),
             description: localize(
                 'The concept of the D’Alembert Strategy is said to be similar to the Martingale Strategy where you will increase your contract size after a loss. With the D’Alembert Strategy, you will also decrease your contract size after a successful trade.'
             ),
         },
         oscars_grind: {
             index: 2,
-            label: "Oscar's Grind",
+            label: localize("Oscar's Grind"),
             description: localize(
                 "The Oscar's Grind Strategy is a low-risk positive progression strategy that first appeared in 1965. By using this strategy, the size of your contract will increase after successful trades, but remains unchanged after unsuccessful trades."
             ),

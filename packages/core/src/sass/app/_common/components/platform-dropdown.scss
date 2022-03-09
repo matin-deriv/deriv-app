@@ -1,6 +1,6 @@
 /* @define platform-dropdown; weak */
 .platform-dropdown {
-    z-index: 5;
+    z-index: 7;
     background-color: var(--overlay-outside-dialog);
     width: 100%;
     height: 100%;
@@ -44,10 +44,8 @@
         top: 0;
         transform: translateY(0px);
         transition: transform 0.25s ease;
-        @include desktop() {
-            display: flex;
-            flex-wrap: wrap;
-        }
+        display: flex;
+        flex-flow: wrap;
 
         &-platform {
             position: relative;
@@ -91,8 +89,8 @@
             &.active {
                 border: solid 2px var(--border-active);
             }
-            &:not(.active):hover &__background {
-                opacity: 1;
+            &:not(.active):hover {
+                background: var(--state-hover);
             }
             @include mobile {
                 width: 302px;

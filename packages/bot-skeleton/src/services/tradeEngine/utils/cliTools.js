@@ -1,15 +1,11 @@
-import Interpreter from './interpreter';
 import TicksService from '../../api/ticks_service';
-import { generateLiveApiInstance } from '../../api/appId';
 import Observer from '../../../utils/observer';
+import { generateDerivApiInstance } from '../../api/appId';
 
 export const createScope = () => {
     const observer = new Observer();
-    const api = generateLiveApiInstance();
-
+    const api = generateDerivApiInstance();
     const ticksService = new TicksService(api);
 
     return { observer, api, ticksService };
 };
-
-export const createInterpreter = () => new Interpreter();

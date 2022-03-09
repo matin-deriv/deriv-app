@@ -59,7 +59,8 @@
     display: none;
 
     /* enable temporary landscape blocker UI in landscape */
-    @include mobile-landscape {
+    &--visible {
+        display: flex;
         position: fixed;
         top: 0;
         left: 0;
@@ -75,9 +76,6 @@
         z-index: 9999;
         font-weight: bold;
 
-        &--keyboard-visible {
-            display: none !important;
-        }
         &__icon {
             width: 59px;
             height: 64px;
@@ -85,9 +83,6 @@
         &__message {
             padding: 1.6rem 11rem;
             line-height: 1.4;
-        }
-        @include touch-device {
-            display: flex;
         }
     }
 }
@@ -107,6 +102,9 @@
     &--is-route-modal {
         background-color: var(--overlay-outside-dialog);
     }
+    &--is-hidden {
+        margin-top: 0;
+    }
     @include mobile {
         // no footer:
         margin-bottom: 0;
@@ -116,6 +114,13 @@
 
         &--is-scrollable {
             overflow-y: auto;
+        }
+        &--is-dashboard {
+            height: calc(100% - #{$MOBILE_HEADER_HEIGHT_DASHBOARD});
+            margin-top: $MOBILE_HEADER_HEIGHT_DASHBOARD;
+        }
+        &--is-hidden {
+            margin-top: 0;
         }
         .ciq-menu {
             top: 0;
@@ -160,48 +165,6 @@
 
             .contract-audit__wrapper {
                 height: 100%;
-                max-height: calc(100% - 38px);
-            }
-        }
-    }
-}
-
-/** @define sidebar; weak; */
-.sidebar {
-    &__container {
-        position: relative;
-        margin-left: 1.6em;
-        width: $SIDEBAR_WIDTH;
-        margin-top: 8px;
-        z-index: 1;
-    }
-    &__items {
-        opacity: 1;
-        transform: none;
-        position: relative;
-        min-height: 460px;
-        width: $SIDEBAR_WIDTH;
-
-        &:after {
-            transition: opacity 0.25s cubic-bezier(0.25, 0.1, 0.1, 0.25);
-            opacity: 0;
-            position: absolute;
-            pointer-events: none;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 999;
-            content: '';
-            background-color: var(--overlay-outside-dialog);
-        }
-        &--market-closed {
-            & .dc-tooltip--with-label {
-                display: none;
-            }
-            & .dc-tooltip--with-label:before,
-            .dc-tooltip--with-label:after {
-                display: none;
             }
         }
     }

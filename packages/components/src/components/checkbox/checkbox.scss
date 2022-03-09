@@ -21,6 +21,7 @@
         align-self: center;
         box-sizing: border-box;
         border: 2px solid var(--text-less-prominent);
+        outline: none !important;
 
         &--active {
             border: none;
@@ -35,8 +36,7 @@
         opacity: 0.5;
         cursor: not-allowed !important;
     }
-    &__label {
-        color: var(--text-general);
-        font-size: var(--text-size-xs);
+    &--grey-disabled {
+        background-color: var(--checkbox-disabled-grey);
     }
 }

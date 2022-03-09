@@ -1,14 +1,26 @@
-import { action, observable } from 'mobx';
+import { action, computed, observable, reaction } from 'mobx';
 import { formatDate, isEnded } from '@deriv/shared';
+import { log_types } from '@deriv/bot-skeleton';
 import { transaction_elements } from '../constants/transactions';
+import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 
 export default class TransactionsStore {
     constructor(root_store) {
         this.root_store = root_store;
+        this.disposeReactionsFn = this.registerReactions();
     }
 
-    @observable elements = [];
+    TRANSACTION_CACHE = 'transaction_cache';
+
+    @observable elements = getStoredItemsByUser(this.TRANSACTION_CACHE, this.root_store.core.client.loginid, []);
     @observable active_transaction_id = null;
+    recovered_completed_transactions = [];
+    recovered_transactions = [];
+
+    @computed
+    get transactions() {
+        return this.elements.filter(element => element.type === transaction_elements.CONTRACT);
+    }
 
     @action.bound
     onBotContractEvent(data) {
@@ -22,10 +34,11 @@ export default class TransactionsStore {
         const contract = {
             barrier: data.barrier,
             buy_price: data.buy_price,
+            contract_id: data.contract_id,
             contract_type: data.contract_type,
             currency: data.currency,
-            display_name: data.display_name,
             date_start: formatDate(data.date_start, 'YYYY-M-D HH:mm:ss [GMT]'),
+            display_name: data.display_name,
             entry_tick: data.entry_tick_display_value,
             entry_tick_time: data.entry_tick_time && formatDate(data.entry_tick_time, 'YYYY-M-D HH:mm:ss [GMT]'),
             exit_tick: data.exit_tick_display_value,
@@ -33,6 +46,7 @@ export default class TransactionsStore {
             high_barrier: data.high_barrier,
             is_completed,
             low_barrier: data.low_barrier,
+            payout: data.payout,
             profit: is_completed && data.profit,
             run_id,
             shortcode: data.shortcode,
@@ -102,6 +116,7 @@ export default class TransactionsStore {
     @action.bound
     onMount() {
         window.addEventListener('click', this.onClickOutsideTransaction);
+        this.recoverPendingContracts();
     }
 
     @action.bound
@@ -111,6 +126,83 @@ export default class TransactionsStore {
 
     @action.bound
     clear() {
-        this.elements = this.elements.slice(0, 0); // force array update
+        this.elements = this.elements.slice(0, 0);
+        this.recovered_completed_transactions = this.recovered_completed_transactions.slice(0, 0);
+        this.recovered_transactions = this.recovered_transactions.slice(0, 0);
+    }
+
+    registerReactions() {
+        const { client } = this.root_store.core;
+
+        // Write transactions to session storage on each change in transaction elements.
+        const disposeTransactionElementsListener = reaction(
+            () => this.elements,
+            elements => {
+                const stored_transactions = getStoredItemsByKey(this.TRANSACTION_CACHE, {});
+                stored_transactions[client.loginid] = elements.slice(0, 5000);
+                setStoredItemsByKey(this.TRANSACTION_CACHE, stored_transactions);
+            }
+        );
+
+        // Attempt to load cached transactions on client loginid change.
+        const disposeClientLoginIdListener = reaction(
+            () => client.loginid,
+            () => (this.elements = getStoredItemsByUser(this.TRANSACTION_CACHE, client.loginid, []))
+        );
+
+        // User could've left the page mid-contract. On initial load, try
+        // to recover any pending contracts so we can reflect accurate stats
+        // and transactions.
+        const disposeRecoverContracts = reaction(
+            () => this.transactions.length,
+            () => this.recoverPendingContracts()
+        );
+
+        return () => {
+            disposeTransactionElementsListener();
+            disposeClientLoginIdListener();
+            disposeRecoverContracts();
+        };
+    }
+
+    recoverPendingContracts() {
+        this.transactions.forEach(({ data: trx }) => {
+            if (trx.is_completed || this.recovered_transactions.includes(trx.contract_id)) return;
+            this.recoverPendingContractsById(trx.contract_id);
+        });
+    }
+
+    recoverPendingContractsById(contract_id) {
+        const { ws } = this.root_store;
+
+        ws.authorized.subscribeProposalOpenContract(contract_id, response => {
+            if (!response.error) {
+                const { proposal_open_contract } = response;
+
+                const { contract_info } = this.root_store.summary_card;
+
+                if (proposal_open_contract.contract_id === contract_info?.contract_id) return;
+
+                this.onBotContractEvent(proposal_open_contract);
+
+                if (!this.recovered_transactions.includes(proposal_open_contract.contract_id)) {
+                    this.recovered_transactions.push(proposal_open_contract.contract_id);
+                }
+
+                if (
+                    !this.recovered_completed_transactions.includes(proposal_open_contract.contract_id) &&
+                    isEnded(proposal_open_contract)
+                ) {
+                    this.recovered_completed_transactions.push(proposal_open_contract.contract_id);
+
+                    const { currency, profit } = proposal_open_contract;
+
+                    this.root_store.journal.onLogSuccess({
+                        log_type: profit > 0 ? log_types.PROFIT : log_types.LOST,
+                        extra: { currency, profit },
+                    });
+                }
+            }
+        });
     }
 }

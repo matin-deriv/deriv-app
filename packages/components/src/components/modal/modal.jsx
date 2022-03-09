@@ -6,14 +6,17 @@ import { CSSTransition } from 'react-transition-group';
 import Body from './modal-body.jsx';
 import Footer from './modal-footer.jsx';
 import Icon from '../icon/icon.jsx';
+import Text from '../text/text.jsx';
 import { useOnClickOutside } from '../../hooks';
 
 const ModalElement = ({
+    close_icon_color,
     elements_to_ignore,
     has_close_icon,
     onMount,
     onUnmount,
     is_open,
+    is_risk_warning_visible,
     toggleModal,
     id,
     title,
@@ -24,9 +27,11 @@ const ModalElement = ({
     is_vertical_top,
     is_title_centered,
     header,
+    header_backgound_color,
     portalId,
     children,
     height,
+    should_header_stick_body,
     width,
     renderTitle,
     small,
@@ -36,34 +41,60 @@ const ModalElement = ({
     const modal_root_ref = React.useRef(el_portal_node || document.getElementById('modal_root'));
     const wrapper_ref = React.useRef();
 
-    const is_datepicker_visible = () => modal_root_ref.current.querySelectorAll('.dc-datepicker__picker').length;
-    const is_dialog_visible = () => modal_root_ref.current.querySelectorAll('.dc-mobile-dialog').length;
+    const portal_elements_selector = [
+        '.dc-datepicker__picker',
+        '.dc-mobile-dialog',
+        '.dc-dropdown-list',
+        '.dc-dropdown__list',
+    ];
+
+    const isPortalElementVisible = () =>
+        modal_root_ref.current.querySelectorAll(portal_elements_selector.join(', ')).length;
 
     const validateClickOutside = e => {
         const is_absolute_modal_visible = document.getElementById('modal_root_absolute')?.hasChildNodes();
         const path = e.path ?? e.composedPath?.();
         return (
             has_close_icon &&
-            !is_datepicker_visible() &&
-            !is_dialog_visible() &&
+            !isPortalElementVisible() &&
             is_open &&
             !is_absolute_modal_visible &&
             !(elements_to_ignore && path?.find(el => elements_to_ignore.includes(el)))
         );
     };
 
-    useOnClickOutside(wrapper_ref, toggleModal, validateClickOutside);
+    const closeModal = e => {
+        if (is_open) toggleModal(e);
+    };
+
+    useOnClickOutside(wrapper_ref, closeModal, validateClickOutside);
 
     React.useEffect(() => {
-        el_ref.current.classList.add('dc-modal');
-        modal_root_ref.current.appendChild(el_ref.current);
+        const local_el_ref = el_ref;
+        const local_modal_root_ref = modal_root_ref;
+
+        local_el_ref.current.classList.add('dc-modal');
+        local_modal_root_ref.current.appendChild(local_el_ref.current);
         if (typeof onMount === 'function') onMount();
 
         return () => {
-            modal_root_ref.current.removeChild(el_ref.current);
+            local_modal_root_ref.current.removeChild(local_el_ref.current);
             if (typeof onUnmount === 'function') onUnmount();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+    const closeOnEscButton = React.useCallback(
+        e => {
+            if (e.key === 'Escape') {
+                toggleModal?.();
+            }
+        },
+        [toggleModal]
+    );
+    React.useEffect(() => {
+        window.addEventListener('keydown', closeOnEscButton);
+        return () => window.removeEventListener('keydown', closeOnEscButton);
+    }, [closeOnEscButton]);
 
     const rendered_title = typeof renderTitle === 'function' ? renderTitle() : null;
 
@@ -73,6 +104,7 @@ const ModalElement = ({
             id={id}
             className={classNames('dc-modal__container', {
                 [`dc-modal__container_${className}`]: className,
+                'dc-modal__container--risk-message': is_risk_warning_visible,
                 'dc-modal__container--small': small,
                 'dc-modal__container--is-vertical-centered': is_vertical_centered,
                 'dc-modal__container--is-vertical-bottom': is_vertical_bottom,
@@ -84,30 +116,42 @@ const ModalElement = ({
                 width: width || 'auto',
             }}
         >
-            {(header || title || rendered_title) && (
+            {!is_risk_warning_visible && (header || title || rendered_title) && (
                 <div
                     className={classNames('dc-modal-header', {
+                        'dc-modal-header__border-bottom': !should_header_stick_body,
                         [`dc-modal-header--${className}`]: className,
                         [`dc-modal-header--is-title-centered`]: is_title_centered,
                     })}
+                    style={{
+                        background: header_backgound_color,
+                    }}
                 >
                     {rendered_title && (
-                        <h3
+                        <Text
+                            as='h3'
+                            color='prominent'
+                            weight='bold'
+                            styles={{ lineHeight: '2.4rem' }}
                             className={classNames('dc-modal-header__title', {
                                 [`dc-modal-header__title--${className}`]: className,
                             })}
                         >
                             {rendered_title}
-                        </h3>
+                        </Text>
                     )}
                     {title && (
-                        <h3
+                        <Text
+                            as='h3'
+                            color='prominent'
+                            weight='bold'
+                            styles={{ lineHeight: '2.4rem' }}
                             className={classNames('dc-modal-header__title', {
                                 [`dc-modal-header__title--${className}`]: className,
                             })}
                         >
                             {title}
-                        </h3>
+                        </Text>
                     )}
                     {header && (
                         <div
@@ -119,8 +163,8 @@ const ModalElement = ({
                         </div>
                     )}
                     {has_close_icon && (
-                        <div onClick={toggleModal} className='dc-modal-header__close'>
-                            <Icon icon='IcCross' />
+                        <div onClick={toggleModal} className='dc-modal-header__close' role='button'>
+                            <Icon icon='IcCross' color={close_icon_color} />
                         </div>
                     )}
                 </div>
@@ -133,12 +177,15 @@ const ModalElement = ({
 
 ModalElement.defaultProps = {
     has_close_icon: true,
+    should_header_stick_body: true,
 };
 
 ModalElement.propTypes = {
     children: PropTypes.node,
     className: PropTypes.string,
+    close_icon_color: PropTypes.string,
     has_close_icon: PropTypes.bool,
+    header_backgound_color: PropTypes.string,
     header: PropTypes.node,
     id: PropTypes.string,
     is_open: PropTypes.bool,
@@ -146,6 +193,7 @@ ModalElement.propTypes = {
     onMount: PropTypes.func,
     onUnmount: PropTypes.func,
     small: PropTypes.bool,
+    should_header_stick_body: PropTypes.bool,
     renderTitle: PropTypes.func,
     title: PropTypes.oneOfType([PropTypes.string, PropTypes.bool, PropTypes.node]),
     toggleModal: PropTypes.func,
@@ -155,10 +203,13 @@ ModalElement.propTypes = {
 const Modal = ({
     children,
     className,
+    close_icon_color,
     header,
     id,
     is_open,
+    is_risk_warning_visible,
     has_close_icon,
+    header_backgound_color,
     height,
     onEntered,
     onExited,
@@ -172,6 +223,7 @@ const Modal = ({
     is_vertical_top,
     is_title_centered,
     renderTitle,
+    should_header_stick_body,
     title,
     toggleModal,
     width,
@@ -193,9 +245,13 @@ const Modal = ({
     >
         <ModalElement
             className={className}
+            close_icon_color={close_icon_color}
+            should_header_stick_body={should_header_stick_body}
             header={header}
+            header_backgound_color={header_backgound_color}
             id={id}
             is_open={is_open}
+            is_risk_warning_visible={is_risk_warning_visible}
             is_confirmation_modal={is_confirmation_modal}
             is_vertical_bottom={is_vertical_bottom}
             is_vertical_centered={is_vertical_centered}
@@ -223,13 +279,17 @@ Modal.Footer = Footer;
 
 Modal.defaultProps = {
     has_close_icon: true,
+    should_header_stick_body: true,
 };
 
 Modal.propTypes = {
     children: PropTypes.node,
     className: PropTypes.string,
+    close_icon_color: PropTypes.string,
+    should_header_stick_body: PropTypes.bool,
     has_close_icon: PropTypes.bool,
     header: PropTypes.node,
+    header_backgound_color: PropTypes.string,
     height: PropTypes.string,
     id: PropTypes.string,
     is_open: PropTypes.bool,

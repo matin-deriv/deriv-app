@@ -1,7 +1,14 @@
-import { getPropertyValue, cloneObject, isTimeValid, minDate, toMoment } from '@deriv/shared';
+import {
+    getPropertyValue,
+    cloneObject,
+    isTimeValid,
+    minDate,
+    toMoment,
+    shouldShowCancellation,
+    WS,
+} from '@deriv/shared';
 import ServerTime from '_common/base/server_time';
 import { localize } from '@deriv/translations';
-import { WS } from 'Services/ws-methods';
 
 import { getUnitMap } from 'Stores/Modules/Portfolio/Helpers/details';
 import { buildBarriersConfig } from './barrier';
@@ -29,7 +36,7 @@ const ContractType = (() => {
                 has_contracts && !r.contracts_for.available.find(contract => contract.start_type !== 'forward');
             if (!has_contracts || has_only_forward_starting_contracts) return;
             const contract_categories = getContractCategoriesConfig();
-            contract_types = getContractTypesConfig();
+            contract_types = getContractTypesConfig(symbol);
 
             available_contract_types = {};
             available_categories = cloneObject(contract_categories); // To preserve the order (will clean the extra items later in this function)
@@ -148,6 +155,7 @@ const ContractType = (() => {
             multiplier,
             start_date,
             cancellation_duration,
+            symbol,
         } = store;
 
         if (!contract_type) return {};
@@ -164,8 +172,9 @@ const ContractType = (() => {
         const obj_duration_units_min_max = getDurationMinMax(contract_type, obj_start_type.contract_start_type);
 
         const obj_multiplier_range_list = getMultiplierRange(contract_type, multiplier);
-        const obj_cancellation_range_list = getCancellationRange(contract_type, cancellation_duration);
+        const obj_cancellation = getCancellation(contract_type, cancellation_duration, symbol);
         const obj_expiry_type = getExpiryType(obj_duration_units_list, expiry_type);
+        const obj_equal = getEqualProps(contract_type);
 
         return {
             ...form_components,
@@ -179,29 +188,36 @@ const ContractType = (() => {
             ...obj_duration_units_min_max,
             ...obj_expiry_type,
             ...obj_multiplier_range_list,
-            ...obj_cancellation_range_list,
+            ...obj_cancellation,
+            ...obj_equal,
         };
     };
 
     const getContractType = (list, contract_type) => {
         const arr_list = Object.keys(list || {})
             .reduce((k, l) => [...k, ...list[l].map(ct => ct.value)], [])
-            .filter(type => unsupported_contract_types_list.indexOf(type) === -1);
+            .filter(type => unsupported_contract_types_list.indexOf(type) === -1)
+            .sort((a, b) => (a === 'multiplier' || b === 'multiplier' ? -1 : 0));
+
         return {
             contract_type: getArrayDefaultValue(arr_list, contract_type),
         };
     };
 
-    const getComponents = c_type => ({
-        form_components: ['duration', 'amount', ...contract_types[c_type].components].filter(
-            component =>
-                !(
-                    component === 'duration' &&
-                    contract_types[c_type].config &&
-                    contract_types[c_type].config.hide_duration
-                )
-        ),
-    });
+    const getComponents = c_type => {
+        return (
+            contract_types && {
+                form_components: ['duration', 'amount', ...contract_types[c_type].components].filter(
+                    component =>
+                        !(
+                            component === 'duration' &&
+                            contract_types[c_type].config &&
+                            contract_types[c_type].config.hide_duration
+                        )
+                ),
+            }
+        );
+    };
 
     const getDurationUnitsList = (contract_type, contract_start_type) => ({
         duration_units_list:
@@ -261,17 +277,17 @@ const ContractType = (() => {
         const config = getPropertyValue(available_contract_types, [contract_type, 'config']);
         const start_dates_list = [];
 
-        if (config.has_spot) {
+        if (config?.has_spot) {
             // Number(0) refers to 'now'
             start_dates_list.push({ text: localize('Now'), value: Number(0) });
         }
-        if (config.forward_starting_dates) {
+        if (config?.forward_starting_dates) {
             start_dates_list.push(...config.forward_starting_dates);
         }
 
         const start_date = start_dates_list.find(item => item.value === current_start_date)
             ? current_start_date
-            : start_dates_list[0].value;
+            : start_dates_list[0]?.value;
 
         return { start_date, start_dates_list };
     };
@@ -482,10 +498,7 @@ const ContractType = (() => {
                 }
                 // Set the expiry_time to 5 minute less than start_time for forwading contracts when the expiry_time is null and the expiry_date is tomorrow.
                 if (end_time === '00:00' && start_moment.isBefore(end_moment, 'day')) {
-                    end_time = start_moment
-                        .clone()
-                        .subtract(5, 'minute')
-                        .format('HH:mm');
+                    end_time = start_moment.clone().subtract(5, 'minute').format('HH:mm');
                 }
             }
         }
@@ -531,7 +544,7 @@ const ContractType = (() => {
         };
     };
 
-    const getCancellationRange = (contract_type, cancellation_duration) => {
+    const getCancellation = (contract_type, cancellation_duration, symbol) => {
         const arr_cancellation_range =
             getPropertyValue(available_contract_types, [contract_type, 'config', 'cancellation_range']) || [];
 
@@ -542,10 +555,25 @@ const ContractType = (() => {
             return `${duration} ${unit_map[unit].name_plural}`;
         };
 
+        const should_show_cancellation = shouldShowCancellation(symbol);
+
         return {
             cancellation_duration: getArrayDefaultValue(arr_cancellation_range, cancellation_duration),
             cancellation_range_list: arr_cancellation_range.map(d => ({ text: `${getText(d)}`, value: d })),
+            ...(should_show_cancellation ? {} : { has_cancellation: false }),
         };
+    };
+
+    const getEqualProps = contract_type => {
+        const base_contract_type = /^(.*)_equal$/.exec(contract_type)?.[1];
+
+        if (base_contract_type && !available_contract_types[base_contract_type]) {
+            return {
+                is_equal: 1,
+                has_equals_only: true,
+            };
+        }
+        return {};
     };
 
     return {

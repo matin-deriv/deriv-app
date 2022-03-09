@@ -1,15 +1,12 @@
-import { action, autorun, computed, observable } from 'mobx';
-import { getPathname, getPlatformHeader, isEmptyObject, LocalStore, unique } from '@deriv/shared';
-import { sortNotifications } from 'App/Components/Elements/NotificationMessage';
+import { getPlatformInformation, isMobile, isTouchDevice, LocalStore, platform_name, routes } from '@deriv/shared';
 import { MAX_MOBILE_WIDTH, MAX_TABLET_WIDTH } from 'Constants/ui';
+import { action, autorun, computed, observable } from 'mobx';
 import BaseStore from './base-store';
-import { clientNotifications, excluded_notifications } from './Helpers/client-notifications';
 
 const store_name = 'ui_store';
 
 export default class UIStore extends BaseStore {
     @observable is_account_settings_visible = false;
-    @observable is_notifications_visible = false;
     @observable is_positions_drawer_on = false;
     @observable is_reports_visible = false;
     @observable reports_route_tab_index = 0;
@@ -25,7 +22,7 @@ export default class UIStore extends BaseStore {
     @observable settings_extension = undefined;
     @observable notification_messages_ui = undefined;
 
-    @observable is_dark_mode_on = false;
+    @observable is_dark_mode_on = window?.matchMedia?.('(prefers-color-scheme: dark)').matches && isMobile();
     @observable is_settings_modal_on = false;
     @observable is_accounts_switcher_on = false;
     @observable account_switcher_disabled_message = '';
@@ -39,7 +36,7 @@ export default class UIStore extends BaseStore {
     @observable is_account_signup_modal_visible = false;
     @observable is_set_residence_modal_visible = false;
     @observable is_reset_password_modal_visible = false;
-    @observable is_account_transfer_limit_modal_visible = false;
+    @observable is_reset_trading_password_modal_visible = false;
     // @observable is_purchase_lock_on       = false;
 
     // SmartCharts Controls
@@ -53,12 +50,7 @@ export default class UIStore extends BaseStore {
 
     @observable screen_width = window.innerWidth;
     @observable screen_height = window.innerHeight;
-    @observable is_keyboard_active = false;
-
-    @observable notifications = [];
-    @observable notification_messages = [];
-    @observable marked_notifications = [];
-    @observable push_notifications = [];
+    @observable is_onscreen_keyboard_active = false;
 
     @observable is_advanced_duration = false;
     @observable advanced_duration_unit = 't';
@@ -80,13 +72,14 @@ export default class UIStore extends BaseStore {
     // real account signup
     @observable is_real_acc_signup_on = false;
     @observable real_account_signup_target = undefined;
+    @observable deposit_real_account_signup_target = undefined;
     @observable has_real_account_signup_ended = false;
-
-    // account types modal
-    @observable is_account_types_modal_visible = false;
 
     // Welcome modal
     @observable is_welcome_modal_visible = false;
+
+    // Remove MX gaming account modal
+    @observable is_close_mx_mlt_account_modal_visible = false;
 
     // set currency modal
     @observable is_set_currency_modal_visible = false;
@@ -98,7 +91,11 @@ export default class UIStore extends BaseStore {
 
     // Mt5 topup
     @observable is_top_up_virtual_open = false;
+    @observable is_top_up_virtual_in_progress = false;
     @observable is_top_up_virtual_success = false;
+
+    // MT5 create real STP from demo, show only real accounts from switcher
+    @observable should_show_real_accounts_list = false;
 
     // Real account signup
     @observable real_account_signup = {
@@ -112,15 +109,13 @@ export default class UIStore extends BaseStore {
     // UI Focus retention
     @observable current_focus = null;
 
-    // Enabling EU users
-    @observable is_eu_enabled = false; // TODO: [deriv-eu] - Remove this constant when all EU sections are done.
-
     // Mobile
     mobile_toast_timeout = 3500;
     @observable.shallow toasts = [];
 
-    @observable is_mt5_page = false;
+    @observable is_cfd_page = false;
     @observable is_nativepicker_visible = false;
+    @observable is_landscape = false;
 
     @observable prompt_when = false;
     @observable promptFn = () => {};
@@ -132,6 +127,15 @@ export default class UIStore extends BaseStore {
         target_label: '',
         target_dmt5_label: '',
     };
+
+    @observable manage_real_account_tab_index = 0;
+
+    // onboarding
+    @observable should_show_multipliers_onboarding = false;
+    @observable choose_crypto_currency_target = null;
+
+    // add crypto accounts
+    @observable should_show_cancel = false;
 
     getDurationFromUnit = unit => this[`duration_${unit}`];
 
@@ -160,29 +164,29 @@ export default class UIStore extends BaseStore {
 
         super({ root_store, local_storage_properties, store_name });
 
-        // TODO: [deiv-eu] remove this manual enabler
-        this.toggleIsEuEnabled(localStorage.getItem('is_eu_enabled') === 'true');
-
         window.addEventListener('resize', this.handleResize);
         autorun(() => {
-            // TODO: [disable-dark-bot] Delete this condition when Bot is ready
-            const new_app_routing_history = this.root_store.common.app_routing_history.slice();
-            const platform = getPlatformHeader(new_app_routing_history);
-            if (platform === 'DBot') {
-                document.body.classList.remove('theme--dark');
-                document.body.classList.add('theme--light');
-                return;
-            }
-
-            if (this.is_dark_mode_on) {
-                document.body.classList.remove('theme--light');
-                document.body.classList.add('theme--dark');
-            } else {
-                document.body.classList.remove('theme--dark');
-                document.body.classList.add('theme--light');
-            }
+            this.changeTheme();
         });
     }
+    changeTheme = () => {
+        // TODO: [disable-dark-bot] Delete this condition when Bot is ready
+        const new_app_routing_history = this.root_store.common.app_routing_history.slice();
+        const platform = getPlatformInformation(new_app_routing_history).header;
+        if (platform === platform_name.DBot) {
+            document.body.classList.remove('theme--dark');
+            document.body.classList.add('theme--light');
+            return;
+        }
+
+        if (this.is_dark_mode_on) {
+            document.body.classList.remove('theme--light');
+            document.body.classList.add('theme--dark');
+        } else {
+            document.body.classList.remove('theme--dark');
+            document.body.classList.add('theme--light');
+        }
+    };
 
     @action.bound
     init(notification_messages) {
@@ -214,10 +218,6 @@ export default class UIStore extends BaseStore {
 
     @action.bound
     handleResize() {
-        if (this.is_mobile) {
-            this.is_keyboard_active =
-                window.innerWidth === this.screen_width && this.screen_height > window.innerHeight;
-        }
         this.screen_width = window.innerWidth;
         this.screen_height = window.innerHeight;
     }
@@ -226,6 +226,11 @@ export default class UIStore extends BaseStore {
     setPromptHandler(condition, cb = () => {}) {
         this.prompt_when = condition;
         this.promptFn = cb;
+    }
+
+    @action.bound
+    showCloseMxMltAccountPopup(is_open) {
+        this.is_close_mx_mlt_account_modal_visible = is_open;
     }
 
     @computed
@@ -241,21 +246,6 @@ export default class UIStore extends BaseStore {
     @computed
     get is_account_switcher_disabled() {
         return !!this.account_switcher_disabled_message;
-    }
-
-    @action.bound
-    filterNotificationMessages() {
-        this.notifications = this.notification_messages.filter(notification => {
-            if (notification.platform === undefined || notification.platform.includes(getPathname())) {
-                return true;
-            } else if (!notification.platform.includes(getPathname())) {
-                if (notification.is_disposable) {
-                    this.removeNotificationMessage({ key: notification.key });
-                    this.removeNotificationByKey({ key: notification.key });
-                }
-            }
-            return false;
-        });
     }
 
     @action.bound
@@ -393,8 +383,25 @@ export default class UIStore extends BaseStore {
     }
 
     @action.bound
+    setShouldShowCancel(value) {
+        this.should_show_cancel = value;
+    }
+
+    @action.bound
+    resetRealAccountSignupTarget() {
+        this.deposit_real_account_signup_target = this.real_account_signup_target;
+        this.real_account_signup_target = '';
+    }
+
+    @action.bound
+    setManageRealAccountActiveTabIndex(index) {
+        this.manage_real_account_tab_index = index;
+    }
+
+    @action.bound
     closeRealAccountSignup() {
         this.is_real_acc_signup_on = false;
+        this.resetRealAccountSignupTarget();
         setTimeout(() => {
             this.resetRealAccountSignupParams();
             this.setRealAccountSignupEnd(true);
@@ -428,11 +435,6 @@ export default class UIStore extends BaseStore {
     }
 
     @action.bound
-    toggleNotificationsModal() {
-        this.is_notifications_visible = !this.is_notifications_visible;
-    }
-
-    @action.bound
     toggleAccountSettings(is_visible) {
         this.is_account_settings_visible = is_visible;
     }
@@ -458,104 +460,13 @@ export default class UIStore extends BaseStore {
     }
 
     @action.bound
-    updateNotifications(notifications_array) {
-        this.notifications = notifications_array.filter(message => !excluded_notifications.includes(message.key));
-    }
-
-    @action.bound
-    removeNotifications() {
-        this.notifications = [];
-    }
-
-    @action.bound
-    removeNotificationByKey({ key }) {
-        this.notifications = this.notifications.filter(n => n.key !== key);
-    }
-
-    @action.bound
-    addNotificationMessageByKey(key) {
-        if (key) this.addNotificationMessage(clientNotifications()[key]);
-    }
-
-    @action.bound
-    markNotificationMessage({ key }) {
-        this.marked_notifications.push(key);
-    }
-
-    @action.bound
-    addNotificationMessage(notification) {
-        if (!notification) return;
-        if (!this.notification_messages.find(item => item.header === notification.header)) {
-            this.notification_messages = [...this.notification_messages, notification].sort(sortNotifications);
-            if (!excluded_notifications.includes(notification.key)) {
-                this.updateNotifications(this.notification_messages);
-            }
-            // Remove notification messages if it was already closed by user and exists in LocalStore
-            const active_loginid = LocalStore.get('active_loginid');
-            const messages = LocalStore.getObject('notification_messages');
-            if (active_loginid && !isEmptyObject(messages)) {
-                // Check if is existing message to remove already closed messages stored in LocalStore
-                const is_existing_message = Array.isArray(messages[active_loginid])
-                    ? messages[active_loginid].includes(notification.key)
-                    : false;
-                if (is_existing_message) {
-                    this.markNotificationMessage({ key: notification.key });
-                }
-            }
-        }
-    }
-
-    @action.bound
-    removeNotificationMessage({ key } = {}) {
-        if (!key) return;
-        this.notification_messages = this.notification_messages.filter(n => n.key !== key);
-        // Add notification messages to LocalStore when user closes, check for redundancy
-        const active_loginid = LocalStore.get('active_loginid');
-        if (!excluded_notifications.includes(key) && active_loginid) {
-            const messages = LocalStore.getObject('notification_messages');
-            // Check if same message already exists in LocalStore for this account
-            if (messages[active_loginid] && messages[active_loginid].includes(key)) {
-                return;
-            }
-            const current_message = () => {
-                if (Array.isArray(messages[active_loginid])) {
-                    messages[active_loginid].push(key);
-                    return messages[active_loginid];
-                }
-                return [key];
-            };
-            // Store message into LocalStore upon closing message
-            Object.assign(messages, { [active_loginid]: current_message() });
-            LocalStore.setObject('notification_messages', messages);
-        }
-    }
-
-    @action.bound
-    removeAllNotificationMessages(should_close_persistent) {
-        this.notification_messages = should_close_persistent
-            ? []
-            : [...this.notification_messages.filter(notifs => notifs.is_persistent)];
-    }
-
-    @action.bound
     setHasOnlyForwardingContracts(has_only_forward_starting_contracts) {
         this.has_only_forward_starting_contracts = has_only_forward_starting_contracts;
     }
 
     @action.bound
-    addNotificationBar(message) {
-        this.push_notifications.push(message);
-        this.push_notifications = unique(this.push_notifications, 'msg_type');
-    }
-
-    @action.bound
     toggleUnsupportedContractModal(state_change = !this.is_unsupported_contract_modal_visible) {
         this.is_unsupported_contract_modal_visible = state_change;
-    }
-
-    @action.bound
-    toggleAccountTransferLimitModal(state_change = !this.is_account_transfer_limit_modal_visible) {
-        this.is_account_transfer_limit_modal_visible = state_change;
     }
 
     @action.bound
@@ -579,6 +490,11 @@ export default class UIStore extends BaseStore {
     }
 
     @action.bound
+    setTopUpInProgress(bool) {
+        this.is_top_up_virtual_in_progress = bool;
+    }
+
+    @action.bound
     closeTopUpModal() {
         this.is_top_up_virtual_open = false;
     }
@@ -596,6 +512,11 @@ export default class UIStore extends BaseStore {
     @action.bound
     toggleResetPasswordModal(state_change = !this.is_reset_password_modal_visible) {
         this.is_reset_password_modal_visible = state_change;
+    }
+
+    @action.bound
+    setResetTradingPasswordModalOpen(is_reset_trading_password_modal_visible) {
+        this.is_reset_trading_password_modal_visible = is_reset_trading_password_modal_visible;
     }
 
     @action.bound
@@ -620,12 +541,22 @@ export default class UIStore extends BaseStore {
             success_message: '',
             error_message: '',
         };
-        this.real_account_signup_target = '';
+    }
+
+    @action.bound
+    onOrientationChange({ is_landscape_orientation }) {
+        this.is_landscape = is_landscape_orientation;
+    }
+
+    @action.bound
+    toggleOnScreenKeyboard() {
+        this.is_onscreen_keyboard_active = this.current_focus !== null && this.is_mobile && isTouchDevice();
     }
 
     @action.bound
     setCurrentFocus(value) {
         this.current_focus = value;
+        this.toggleOnScreenKeyboard();
     }
 
     @action.bound
@@ -663,24 +594,58 @@ export default class UIStore extends BaseStore {
     }
 
     @action.bound
-    toggleAccountTypesModal(is_visible = !this.is_account_types_modal_visible) {
-        this.is_account_types_modal_visible = is_visible;
-    }
-
-    @action.bound
     toggleWelcomeModal({ is_visible = !this.is_welcome_modal_visible, should_persist = false }) {
         if (LocalStore.get('has_viewed_welcome_screen') && !should_persist) return;
         this.is_welcome_modal_visible = is_visible;
-        LocalStore.set('has_viewed_welcome_screen', true);
+
+        if (!is_visible) {
+            LocalStore.set('has_viewed_welcome_screen', true);
+        }
     }
 
     @action.bound
-    showAccountTypesModalForEuropean() {
-        this.toggleAccountTypesModal(this.root_store.client.is_uk);
+    notifyAppInstall(prompt) {
+        this.deferred_prompt = prompt;
+        setTimeout(() => {
+            this.root_store.notifications.addNotificationMessageByKey('install_pwa');
+        }, 10000);
     }
 
     @action.bound
-    toggleIsEuEnabled(status = !this.is_eu_enabled) {
-        this.is_eu_enabled = status;
+    async installWithDeferredPrompt() {
+        this.deferred_prompt.prompt();
+        const choice = await this.deferred_prompt.userChoice;
+        if (choice.outcome === 'accepted') {
+            const notification_key = 'install_pwa';
+            this.root_store.notifications.removeNotificationMessage({
+                key: notification_key,
+                should_show_again: false,
+            });
+            this.root_store.notifications.removeNotificationByKey({ key: notification_key });
+        }
+    }
+
+    @action.bound
+    toggleShouldShowRealAccountsList(value) {
+        this.should_show_real_accounts_list = value;
+    }
+
+    @action.bound
+    toggleShouldShowMultipliersOnboarding(value) {
+        this.should_show_multipliers_onboarding = value;
+    }
+
+    @action.bound
+    shouldNavigateAfterChooseCrypto(next_location) {
+        this.choose_crypto_currency_target = next_location;
+    }
+
+    @action.bound
+    continueRouteAfterChooseCrypto() {
+        this.root_store.common.routeTo(this.choose_crypto_currency_target);
+
+        if (this.choose_crypto_currency_target === routes.cashier_deposit) {
+            this.root_store.modules.cashier.general_store.setIsDeposit(true);
+        }
     }
 }

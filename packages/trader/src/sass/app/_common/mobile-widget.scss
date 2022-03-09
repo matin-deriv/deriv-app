@@ -1,7 +1,7 @@
 /** @define mobile-widget */
 .mobile-widget {
     border-radius: 4px;
-    padding: 1em 0.8rem;
+    padding: 1rem 0.8rem;
     height: 4rem;
     background-color: var(--general-main-1);
     display: flex;
@@ -32,23 +32,36 @@
         }
     }
     &__multiplier {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0;
+
         &-amount {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 0.8rem;
-            margin-bottom: 0.6rem;
+            padding: 0.4rem 0.8rem 0;
 
             .mobile-widget__item-label {
                 margin-right: 0.4rem;
             }
         }
+        &-expiration {
+            min-width: 7.2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         &-options {
-            flex: 1 !important;
+            flex: none;
             flex-direction: column;
             padding: 0.6rem 0.8rem;
             margin-bottom: 0.6rem;
+            margin-left: 0.8rem;
+            justify-content: center;
+            min-width: 8.8rem;
 
             .mobile-widget__item-label {
                 color: var(--text-general);
@@ -76,6 +89,33 @@
             .mobile-widget__item-value {
                 font-size: 1.4rem;
                 line-height: 1.8rem;
+            }
+        }
+        &-trade-info {
+            display: flex;
+            justify-content: space-evenly;
+            background: var(--general-main-1);
+            flex: 2;
+            margin-left: 0.8rem;
+
+            &--no-stop-out {
+                justify-content: flex-end;
+                margin-right: 1.6rem;
+            }
+            &-tooltip-text {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+
+                span:before {
+                    content: ': ';
+                }
+                &:first-child {
+                    margin-right: 0.8rem;
+                }
+                @media only screen and (max-width: 340px) {
+                    font-size: 0.8rem;
+                }
             }
         }
     }

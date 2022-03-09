@@ -2,17 +2,24 @@
 <html>
     <head>
         <title>Deriv</title>
-        <meta charset='utf-8' />
-        <meta name='referrer' content='origin' />
+        <meta charset="utf-8" />
+        <meta name="referrer" content="origin" />
         <script>
-            window.addEventListener('message', function(message) {
-                var allowed_origins = [ // TODO: [app-link-refactor] - Remove backwards compatibility for `deriv.app`
-                    'https://smarttrader.deriv.com',
-                    'https://smarttrader.deriv.app',
-                    'https://smarttrader-staging.deriv.app',
-                    'https://smarttrader-staging.deriv.com'
+            window.addEventListener('message', function (message) {
+                let domain_url = '';
+                if (window.location.hostname.indexOf('deriv.me') > -1) {
+                    domain_url = 'deriv.me';
+                } else if (window.location.hostname.indexOf('deriv.be') > -1) {
+                    domain_url = 'deriv.be';
+                } else {
+                    domain_url = 'deriv.com';
+                }
+                var allowed_origins = [
+                    `https://smarttrader.${domain_url}`,
+                    `https://staging-smarttrader.${domain_url}`,
+                    `https://bot.${domain_url}`,
+                    `https://staging-bot.deriv.com`,
                 ];
-
                 if (allowed_origins.includes(message.origin)) {
                     switch (message.data.key) {
                         case 'active_loginid':
@@ -27,6 +34,6 @@
             });
         </script>
     </head>
-    <body>
-    </body>
+
+    <body></body>
 </html>
