@@ -1,4 +1,4 @@
-FROM nginx:alpine
+FROM nginx:1.23.1-alpine
 COPY ./packages/core/dist /usr/share/nginx/html
 COPY ./default.conf /etc/nginx/conf.d/default.conf
 RUN chown -R nginx:nginx /usr/share/nginx/html
