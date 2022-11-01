@@ -9,6 +9,7 @@ import {
     isCryptocurrency,
     isEmptyObject,
     isMobile,
+    isDesktop,
     isMultiplierContract,
     LocalStore,
     platform_name,
@@ -414,7 +415,7 @@ export default class NotificationStore extends BaseStore {
                 if (mt5_withdrawal_locked) this.addNotificationMessage(this.client_notifications.mt5_withdrawal_locked);
                 if (document_needs_action) this.addNotificationMessage(this.client_notifications.document_needs_action);
                 // Acuity notification only for desktop and non EU clients
-                if (!is_eu && !isMobile()) {
+                if (!is_eu && isDesktop()) {
                     this.addNotificationMessage(this.client_notifications.acuity);
                     this.addNotificationMessage(this.client_notifications.acuity_mt5_download);
                 } else {
@@ -652,7 +653,7 @@ export default class NotificationStore extends BaseStore {
                 },
                 platform: [platform_name.DMT5],
                 img_src: getUrlBase('/public/images/common/acuity_software.png'),
-                img_alt: 'Acuity Download',
+                img_alt: localize('Acuity Download'),
                 className: 'acuity-mt5',
                 icon: 'IcCloseDark',
                 type: 'news',
