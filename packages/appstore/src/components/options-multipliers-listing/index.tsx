@@ -1,14 +1,16 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { Text, StaticUrl } from '@deriv/components';
-import { Localize } from '@deriv/translations';
+import { Localize, localize } from '@deriv/translations';
 import ListingContainer from 'Components/containers/listing-container';
 import { BrandConfig } from 'Constants/platform-config';
 import TradingAppCard from 'Components/containers/trading-app-card';
 import { useStores } from 'Stores/index';
 
 const OptionsAndMultipliersListing = () => {
-    const { tradinghub } = useStores();
+    const { tradinghub, client } = useStores();
+    const is_demo = tradinghub.selected_account_type === 'demo';
+    const has_real_account = client.has_any_real_account && tradinghub.selected_account_type === 'real';
 
     return (
         <ListingContainer
@@ -30,8 +32,17 @@ const OptionsAndMultipliersListing = () => {
                 </Text>
             }
         >
+            {!is_demo && !has_real_account && (
+                <div className='full-row'>
+                    <TradingAppCard name={localize('Deriv account')} icon='Options' availability='All' type='get' />
+                </div>
+            )}
             {tradinghub.available_platforms.map((p: BrandConfig) => (
-                <TradingAppCard key={`trading_app_card_${p.name}`} {...p} />
+                <TradingAppCard
+                    key={`trading_app_card_${p.name}`}
+                    {...p}
+                    type={is_demo || has_real_account ? 'trade' : 'none'}
+                />
             ))}
         </ListingContainer>
     );
