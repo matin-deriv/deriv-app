@@ -31,6 +31,7 @@ const OptionsAndMultipliersListing = () => {
                     />
                 </Text>
             }
+            is_deriv_platform
         >
             {!is_demo && !has_real_account && (
                 <div className='full-row'>
