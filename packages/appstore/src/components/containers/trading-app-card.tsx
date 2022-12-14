@@ -1,12 +1,12 @@
 import React from 'react';
-import { Button, Text } from '@deriv/components';
+import { Text } from '@deriv/components';
 import TradigPlatformIconProps from 'Assets/svgs/trading-platform';
 import { platform_config, BrandConfig } from 'Constants/platform-config';
 import './trading-app-card.scss';
 import TradingAppCardActions, { Actions } from './trading-app-card-actions';
 
 const TradingAppCard = ({ name, icon, type }: Actions & BrandConfig) => {
-    const { app_desc, link_to } = platform_config.find(p => p.name === name) || platform_config[0];
+    const { app_desc, link_to } = platform_config.find(config => config.name === name) || platform_config[0];
     return (
         <div className='trading-app-card'>
             <TradigPlatformIconProps icon={icon} size={48} />
