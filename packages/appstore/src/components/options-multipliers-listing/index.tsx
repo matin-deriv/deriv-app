@@ -38,10 +38,10 @@ const OptionsAndMultipliersListing = () => {
                     <TradingAppCard name={localize('Deriv account')} icon='Options' availability='All' type='get' />
                 </div>
             )}
-            {tradinghub.available_platforms.map((p: BrandConfig) => (
+            {tradinghub.available_platforms.map((available_platform: BrandConfig) => (
                 <TradingAppCard
-                    key={`trading_app_card_${p.name}`}
-                    {...p}
+                    key={`trading_app_card_${available_platform.name}`}
+                    {...available_platform}
                     type={is_demo || has_real_account ? 'trade' : 'none'}
                 />
             ))}
