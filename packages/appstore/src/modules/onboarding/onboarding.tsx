@@ -3,7 +3,7 @@ import { localize } from '@deriv/translations';
 import { isMobile, isDesktop, routes, PlatformContext } from '@deriv/shared';
 import { Button, Text, Icon, ProgressBarOnboarding } from '@deriv/components';
 import TradigPlatformIconProps from 'Assets/svgs/trading-platform';
-import { trading_hub_contents } from 'Constants/trading-hub-content';
+import { traders_hub_contents } from 'Constants/trading-hub-content';
 import { useHistory } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { useStores } from 'Stores';
@@ -24,11 +24,11 @@ type TOnboardingProps = {
     >;
 };
 
-const Onboarding = ({ contents = trading_hub_contents }: TOnboardingProps) => {
+const Onboarding = ({ contents = traders_hub_contents }: TOnboardingProps) => {
     const history = useHistory();
     const number_of_steps = Object.keys(contents);
-    const { tradinghub, client } = useStores();
-    const { toggleIsTourOpen } = tradinghub;
+    const { tradershub, client } = useStores();
+    const { toggleIsTourOpen } = tradershub;
     const { is_eu, is_eu_country, is_logged_in } = client;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore // TODO: remove this after PlatformContext is converted to TS

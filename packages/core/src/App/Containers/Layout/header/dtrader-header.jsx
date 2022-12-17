@@ -15,11 +15,11 @@ import { AccountsInfoLoader } from 'App/Components/Layout/Header/Components/Prel
 import { BinaryLink } from 'App/Components/Routes';
 import { Localize } from '@deriv/translations';
 
-const TradingHubMenuHomepage = () => {
+const TradersHubMenuHomepage = () => {
     const redirect = useHistory();
     return (
         <div
-            className='trading-hub-header__tradinghub'
+            className='trading-hub-header__tradershub'
             onClick={() => {
                 redirect.push(routes.traders_hub);
             }}
@@ -48,7 +48,7 @@ const RedirectToOldInterface = () => {
                 </Text>
                 <Icon
                     className='trading-hub-header__dtrader--redirect--beta'
-                    icon='IcAppstoreTradingHubBeta'
+                    icon='IcAppstoreTradersHubBeta'
                     size={45}
                 />
                 <Icon icon='IcArrowRight' size={18} color='red' />
@@ -145,7 +145,7 @@ const DTraderHeader = ({
             <div className='header__menu-items'>
                 <div className='header__menu-left'>
                     <DesktopWrapper>
-                        <TradingHubMenuHomepage />
+                        <TradersHubMenuHomepage />
                         <Divider />
                     </DesktopWrapper>
 

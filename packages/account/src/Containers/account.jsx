@@ -28,7 +28,7 @@ const AccountLogout = ({ logout, history }) => {
     );
 };
 
-const TradingHubLogout = ({ logout }) => {
+const TradersHubLogout = ({ logout }) => {
     const history = useHistory();
     return (
         <div
@@ -97,7 +97,7 @@ const PageOverlayWrapper = ({
                 is_full_width
                 list={subroutes}
                 list_groups={list_groups}
-                extra_content={is_pre_appstore && <TradingHubLogout logout={logout} />}
+                extra_content={is_pre_appstore && <TradersHubLogout logout={logout} />}
             />
         </PageOverlay>
     );

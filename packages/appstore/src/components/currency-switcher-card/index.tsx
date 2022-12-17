@@ -5,9 +5,9 @@ import RealAccountSwitcher from './real/real-account-switcher';
 import { useStores } from 'Stores/index';
 
 const CurrencySwitcherCard = () => {
-    const { tradinghub } = useStores();
+    const { tradershub } = useStores();
 
-    if (tradinghub.selected_account_type === 'real') {
+    if (tradershub.selected_account_type === 'real') {
         return <RealAccountSwitcher />;
     }
     return <DemoAccountCard />;

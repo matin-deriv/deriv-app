@@ -12,9 +12,9 @@ type TStep = {
     has_next_content: boolean;
 };
 
-type TTradingHubContents = Record<'step1' | 'step2' | 'step3' | 'step4' | 'step5' | 'step6', TStep>;
+type TtradershubContents = Record<'step1' | 'step2' | 'step3' | 'step4' | 'step5' | 'step6', TStep>;
 
-export const trading_hub_contents: TTradingHubContents = {
+export const traders_hub_contents: TtradershubContents = {
     step1: {
         component: (
             <StaticDashboard

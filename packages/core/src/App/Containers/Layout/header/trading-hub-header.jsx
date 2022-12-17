@@ -17,11 +17,11 @@ const Divider = () => {
     return <div className='trading-hub-header__divider' />;
 };
 
-const TradingHubMenuHomepage = () => {
+const TradersHubMenuHomepage = () => {
     const history = useHistory();
 
     return (
-        <div className='trading-hub-header__tradinghub' onClick={() => history.push(routes.traders_hub)}>
+        <div className='trading-hub-header__tradershub' onClick={() => history.push(routes.traders_hub)}>
             <Icon icon='IcAppstoreMenuHomepage' size={30} />
         </div>
     );
@@ -38,18 +38,18 @@ const RedirectToOldInterface = () => {
                 <Text as='p' size='xs' color='general'>
                     <Localize i18n_default_text="Exit Trader's hub" />
                 </Text>
-                <Icon className='trading-hub-header__redirect--beta' icon='IcAppstoreTradingHubBeta' size={50} />
+                <Icon className='trading-hub-header__redirect--beta' icon='IcAppstoreTradersHubBeta' size={50} />
                 <Icon icon='IcArrowRight' size={18} color='red' />
             </BinaryLink>
         </div>
     );
 };
 
-const TradingHubOnboarding = ({ is_dark_mode, setIsOnboardingVisited }) => {
+const TradersHubOnboarding = ({ is_dark_mode, setIsOnboardingVisited }) => {
     const history = useHistory();
     return (
-        <div className='trading-hub-header__tradinghub--onboarding'>
-            <div className='trading-hub-header__tradinghub--onboarding--logo'>
+        <div className='trading-hub-header__tradershub--onboarding'>
+            <div className='trading-hub-header__tradershub--onboarding--logo'>
                 <Popover
                     classNameBubble='account-settings-toggle__tooltip'
                     alignment='bottom'
@@ -58,7 +58,7 @@ const TradingHubOnboarding = ({ is_dark_mode, setIsOnboardingVisited }) => {
                     zIndex={9999}
                 >
                     <Icon
-                        icon={is_dark_mode ? 'IcAppstoreTradingHubOnboardingDark' : 'IcAppstoreTradingHubOnboarding'}
+                        icon={is_dark_mode ? 'IcAppstoreTradersHubOnboardingDark' : 'IcAppstoreTradersHubOnboarding'}
                         size={20}
                         onClick={() => {
                             history.push(routes.onboarding);
@@ -84,7 +84,7 @@ const ShowNotifications = ({ is_notifications_visible, notifications_count, togg
     );
 };
 const MemoizedMenuLinks = React.memo(MenuLinks);
-const TradingHubHeader = ({
+const TradersHubHeader = ({
     account_status,
     app_routing_history,
     disableApp,
@@ -162,7 +162,7 @@ const TradingHubHeader = ({
                     {header_extension && is_logged_in && <div>{header_extension}</div>}
                 </MobileWrapper>
                 <DesktopWrapper>
-                    <TradingHubMenuHomepage />
+                    <TradersHubMenuHomepage />
                 </DesktopWrapper>
                 {is_dark_mode ? (
                     <DerivBrandLogoDark className='trading-hub-header__logo' />
@@ -177,7 +177,7 @@ const TradingHubHeader = ({
                 <div className='trading-hub-header__menu-right'>
                     <RedirectToOldInterface />
                     <Divider />
-                    <TradingHubOnboarding is_dark_mode={is_dark_mode} setIsOnboardingVisited={setIsOnboardingVisited} />
+                    <TradersHubOnboarding is_dark_mode={is_dark_mode} setIsOnboardingVisited={setIsOnboardingVisited} />
                     <ShowNotifications
                         is_notifications_visible={is_notifications_visible}
                         notifications_count={notifications_count}
@@ -200,7 +200,7 @@ const TradingHubHeader = ({
             <MobileWrapper>
                 <div className='trading-hub-header__mobile-parent'>
                     <div className='trading-hub-header__menu-middle'>
-                        <TradingHubOnboarding
+                        <TradersHubOnboarding
                             is_dark_mode={is_dark_mode}
                             toggleIsTourOpen={toggleIsTourOpen}
                             is_mf={is_mf}
@@ -237,7 +237,7 @@ const TradingHubHeader = ({
     );
 };
 
-TradingHubHeader.propTypes = {
+TradersHubHeader.propTypes = {
     account_status: PropTypes.object,
     app_routing_history: PropTypes.array,
     disableApp: PropTypes.func,
@@ -271,7 +271,7 @@ TradingHubHeader.propTypes = {
     is_eu_country: PropTypes.bool,
 };
 
-export default connect(({ client, common, modules, notifications, ui, menu, tradinghub }) => ({
+export default connect(({ client, common, modules, notifications, ui, menu, tradershub }) => ({
     account_status: client.account_status,
     app_routing_history: common.app_routing_history,
     disableApp: ui.disableApp,
@@ -297,7 +297,7 @@ export default connect(({ client, common, modules, notifications, ui, menu, trad
     is_social_signup: client.is_social_signup,
     menu_items: menu.extensions,
     replaceCashierMenuOnclick: modules.cashier.general_store.replaceCashierMenuOnclick,
-    toggleIsTourOpen: tradinghub.toggleIsTourOpen,
-    setIsOnboardingVisited: tradinghub.setIsOnboardingVisited,
+    toggleIsTourOpen: tradershub.toggleIsTourOpen,
+    setIsOnboardingVisited: tradershub.setIsOnboardingVisited,
     loginid: client.loginid,
-}))(withRouter(TradingHubHeader));
+}))(withRouter(TradersHubHeader));

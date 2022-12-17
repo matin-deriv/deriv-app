@@ -9,9 +9,9 @@ import { useStores } from 'Stores/index';
 import { isMobile } from '@deriv/shared';
 
 const OptionsAndMultipliersListing = () => {
-    const { tradinghub } = useStores();
-    const is_demo = tradinghub.selected_account_type === 'demo';
-    const has_real_account = tradinghub.has_any_real_account;
+    const { tradershub } = useStores();
+    const is_demo = tradershub.selected_account_type === 'demo';
+    const has_real_account = tradershub.has_any_real_account;
 
     return (
         <ListingContainer
@@ -41,7 +41,7 @@ const OptionsAndMultipliersListing = () => {
                     <TradingAppCard name={localize('Deriv account')} icon='Options' availability='All' type='get' />
                 </div>
             )}
-            {tradinghub.available_platforms.map((available_platform: BrandConfig) => (
+            {tradershub.available_platforms.map((available_platform: BrandConfig) => (
                 <TradingAppCard
                     key={`trading_app_card_${available_platform.name}`}
                     {...available_platform}

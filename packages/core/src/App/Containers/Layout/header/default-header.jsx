@@ -86,7 +86,7 @@ const DefaultHeader = ({
                     <Text as='p' size='xs' color='general'>
                         <Localize i18n_default_text="Exit Trader's hub" />
                     </Text>
-                    <Icon className='trading-hub-header__redirect--beta' icon='IcAppstoreTradingHubBeta' size={50} />
+                    <Icon className='trading-hub-header__redirect--beta' icon='IcAppstoreTradersHubBeta' size={50} />
                     <Icon icon='IcArrowRight' size={18} color='red' />
                 </BinaryLink>
             </div>
@@ -125,7 +125,7 @@ const DefaultHeader = ({
         return <div className='header__menu--separator' />;
     };
 
-    const ExploreTradingHub = () => {
+    const ExploreTradersHub = () => {
         const platform_store = React.useContext(PlatformContext);
         const EnablePreAppstore = () => {
             platform_store.setIsPreAppStore(true);
@@ -142,7 +142,7 @@ const DefaultHeader = ({
                     </Text>
                     <Icon
                         className='trading-hub-header__dtrader--redirect--beta'
-                        icon='IcAppstoreTradingHubBeta'
+                        icon='IcAppstoreTradersHubBeta'
                         size={45}
                     />
                     <Icon icon='IcArrowRight' size={18} color='red' />
@@ -208,7 +208,7 @@ const DefaultHeader = ({
                         {window.location.pathname.startsWith(routes.appstore) ? (
                             <RedirectToOldInterface />
                         ) : (
-                            <ExploreTradingHub />
+                            <ExploreTradersHub />
                         )}
                         <Divider />
                     </DesktopWrapper>

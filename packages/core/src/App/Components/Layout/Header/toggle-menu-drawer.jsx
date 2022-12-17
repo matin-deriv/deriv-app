@@ -152,7 +152,7 @@ const ToggleMenuDrawer = React.forwardRef(
                         routes.markets,
                     ];
                     secondary_routes = [];
-                } else if ((is_pre_appstore && location === routes.traders_hub) || is_trading_hub_category) {
+                } else if ((is_pre_appstore && location === routes.traders_hub) || is_traders_hub_category) {
                     primary_routes = [routes.account, routes.cashier];
                     secondary_routes = [];
                 } else {
@@ -333,12 +333,12 @@ const ToggleMenuDrawer = React.forwardRef(
 
         const history = useHistory();
 
-        const is_trading_hub_category =
+        const is_traders_hub_category =
             route.startsWith(routes.traders_hub) ||
             route.startsWith(routes.cashier) ||
             route.startsWith(routes.account);
 
-        const tradingHubRedirect = () => {
+        const tradersHubRedirect = () => {
             if (is_pre_appstore) {
                 setIsPreAppStore(false);
                 toggleDrawer();
@@ -383,7 +383,7 @@ const ToggleMenuDrawer = React.forwardRef(
                             )}
                             {is_pre_appstore && (
                                 <React.Fragment>
-                                    {is_logged_in && is_trading_hub_category ? (
+                                    {is_logged_in && is_traders_hub_category ? (
                                         <MobileDrawer.SubHeader
                                             className={classNames({
                                                 'dc-mobile-drawer__subheader--hidden': is_submenu_expanded,
@@ -395,7 +395,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                                 }`}
                                                 type='button'
                                                 large
-                                                onClick={tradingHubRedirect}
+                                                onClick={tradersHubRedirect}
                                             >
                                                 <div className='header__menu--trading-hub-container'>
                                                     <Text className='header__menu--trading-hub-text' size='xs'>
@@ -403,7 +403,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                                     </Text>
                                                     <Icon
                                                         className='header__menu--exit-trading-hub-beta-icon'
-                                                        icon='IcAppstoreTradingHubBeta'
+                                                        icon='IcAppstoreTradersHubBeta'
                                                         size={30}
                                                     />
                                                     <Icon
@@ -429,7 +429,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                             className='header__menu-mobile-platform-switcher'
                                             id='mobile_platform_switcher'
                                         />
-                                        {is_logged_in && !is_trading_hub_category && (
+                                        {is_logged_in && !is_traders_hub_category && (
                                             <MobileDrawer.Item className='header__menu--trading-hub'>
                                                 <Button
                                                     className={`header__menu--explore-trading-hub ${
@@ -437,7 +437,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                                     }`}
                                                     type='button'
                                                     large
-                                                    onClick={tradingHubRedirect}
+                                                    onClick={tradersHubRedirect}
                                                 >
                                                     <div className='header__menu--trading-hub-container'>
                                                         <Text className='header__menu--trading-hub-text' size='xs'>
@@ -445,7 +445,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                                         </Text>
                                                         <Icon
                                                             className='header__menu--exit-trading-hub-beta-icon'
-                                                            icon='IcAppstoreTradingHubBeta'
+                                                            icon='IcAppstoreTradersHubBeta'
                                                             size={30}
                                                         />
                                                         <Icon
@@ -469,7 +469,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                                 />
                                             </MobileDrawer.Item>
                                         )}
-                                        {is_logged_in && !is_trading_hub_category && (
+                                        {is_logged_in && !is_traders_hub_category && (
                                             <MobileDrawer.Item>
                                                 <MenuLink
                                                     link_to={routes.trade}
@@ -602,7 +602,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                                 }`}
                                                 type='button'
                                                 large
-                                                onClick={tradingHubRedirect}
+                                                onClick={tradersHubRedirect}
                                             >
                                                 <div className='header__menu--trading-hub-container'>
                                                     <Text className='header__menu--trading-hub-text' size='xs'>
@@ -610,7 +610,7 @@ const ToggleMenuDrawer = React.forwardRef(
                                                     </Text>
                                                     <Icon
                                                         className='header__menu--trading-hub-beta-icon'
-                                                        icon='IcAppstoreTradingHubBeta'
+                                                        icon='IcAppstoreTradersHubBeta'
                                                         size={30}
                                                     />
                                                     <Icon

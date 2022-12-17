@@ -9,7 +9,7 @@ import { formatMoney, isMobile } from '@deriv/shared';
 import classNames from 'classnames';
 
 const AssetSummary = () => {
-    const { client, common, tradinghub } = useStores();
+    const { client, common, tradershub } = useStores();
     const {
         account_list,
         accounts,
@@ -20,7 +20,7 @@ const AssetSummary = () => {
         is_eu,
     } = client;
     const { getExchangeRate } = common;
-    const { selected_account_type } = tradinghub;
+    const { selected_account_type } = tradershub;
 
     const [exchanged_rate_cfd_real, setExchangedRateCfdReal] = React.useState(1);
     const [exchanged_rate_demo, setExchangedRateDemo] = React.useState(1);

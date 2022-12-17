@@ -22,8 +22,8 @@ const SwitcherItem = ({ children, is_selected, ...props }: SwitcherItemProps & H
 };
 
 const RegulatorSwitcher = () => {
-    const { tradinghub } = useStores();
-    const { toggleRegulatorsCompareModal } = tradinghub;
+    const { tradershub } = useStores();
+    const { toggleRegulatorsCompareModal } = tradershub;
 
     return (
         <div className='regulators-switcher'>
@@ -36,8 +36,8 @@ const RegulatorSwitcher = () => {
                     return (
                         <SwitcherItem
                             key={`regulator-item_${region}`}
-                            is_selected={region === tradinghub.selected_region}
-                            onClick={() => tradinghub.selectRegion(region)}
+                            is_selected={region === tradershub.selected_region}
+                            onClick={() => tradershub.selectRegion(region)}
                         >
                             {region}
                         </SwitcherItem>

@@ -34,7 +34,7 @@ const FooterExtensionRenderer = (footer_extension, idx) => {
     );
 };
 
-const TradingHubFooter = ({
+const TradersHubFooter = ({
     enableApp,
     footer_extensions,
     is_app_disabled,
@@ -116,7 +116,7 @@ const TradingHubFooter = ({
     );
 };
 
-TradingHubFooter.propTypes = {
+TradersHubFooter.propTypes = {
     is_app_disabled: PropTypes.bool,
     is_logged_in: PropTypes.bool,
     is_route_modal_on: PropTypes.bool,
@@ -151,5 +151,5 @@ export default withRouter(
         toggleSettingsModal: ui.toggleSettingsModal,
         is_dark_mode: ui.is_dark_mode_on,
         setDarkMode: ui.setDarkMode,
-    }))(TradingHubFooter)
+    }))(TradersHubFooter)
 );

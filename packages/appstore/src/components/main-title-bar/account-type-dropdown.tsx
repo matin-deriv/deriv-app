@@ -6,16 +6,16 @@ import React from 'react';
 import './account-type-dropdown.scss';
 
 const AccountTypeDropdown = () => {
-    const { tradinghub } = useStores();
+    const { tradershub } = useStores();
 
     return (
         <select
             className={classNames(
                 'account-type-dropdown',
-                `account-type-dropdown--${tradinghub.selected_account_type}`
+                `account-type-dropdown--${tradershub.selected_account_type}`
             )}
-            value={tradinghub.selected_account_type}
-            onChange={e => tradinghub.selectAccountType(e.target.value)}
+            value={tradershub.selected_account_type}
+            onChange={e => tradershub.selectAccountType(e.target.value)}
         >
             {account_types.map((account_type: AccountType) => (
                 <option key={account_type} className='account-type-dropdown__item' value={account_type}>

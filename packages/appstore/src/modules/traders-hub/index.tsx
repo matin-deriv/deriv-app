@@ -10,7 +10,7 @@ import { observer } from 'mobx-react-lite';
 import { isDesktop, routes } from '@deriv/shared';
 
 const TradersHub = () => {
-    const { tradinghub, client } = useStores();
+    const { tradershub, client } = useStores();
 
     const platform_toggle_options = [
         { text: `${client.is_eu ? 'Multipliers' : 'Options & Multipliers'}`, value: 'options' },
@@ -23,7 +23,7 @@ const TradersHub = () => {
             name: string;
         };
     }) => {
-        tradinghub.setTogglePlatformType(event.target.value);
+        tradershub.setTogglePlatformType(event.target.value);
     };
 
     const traders_hub = window.location.pathname === routes.traders_hub;
@@ -47,10 +47,10 @@ const TradersHub = () => {
                             is_traders_hub={traders_hub}
                             name='platforn_type'
                             onChange={platformTypeChange}
-                            value={tradinghub.selected_platform_type}
+                            value={tradershub.selected_platform_type}
                         />
-                        {tradinghub.selected_platform_type === 'options' && <OptionsAndMultipliersListing />}
-                        {tradinghub.selected_platform_type === 'cfd' && <CFDsListing />}
+                        {tradershub.selected_platform_type === 'options' && <OptionsAndMultipliersListing />}
+                        {tradershub.selected_platform_type === 'cfd' && <CFDsListing />}
                     </MobileWrapper>
                     <ModalManager />
                 </div>

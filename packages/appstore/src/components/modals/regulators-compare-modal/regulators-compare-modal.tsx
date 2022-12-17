@@ -6,8 +6,8 @@ import RegulatorsCompareModalContent from './regulators-compare-modal-content';
 import { Modal, DesktopWrapper, MobileDialog, MobileWrapper, UILoader } from '@deriv/components';
 
 const RegulatorsCompareModal = () => {
-    const { tradinghub, ui } = useStores();
-    const { is_regulators_compare_modal_visible, toggleRegulatorsCompareModal } = tradinghub;
+    const { tradershub, ui } = useStores();
+    const { is_regulators_compare_modal_visible, toggleRegulatorsCompareModal } = tradershub;
     const { disableApp, enableApp } = ui;
     const closeModal = () => {
         toggleRegulatorsCompareModal();
