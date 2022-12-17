@@ -14,14 +14,14 @@ import DerivBrandLogoDark from 'Assets/SvgComponents/header/deriv-brand-logo-dar
 import RealAccountSignup from 'App/Containers/RealAccountSignup';
 
 const Divider = () => {
-    return <div className='trading-hub-header__divider' />;
+    return <div className='traders-hub-header__divider' />;
 };
 
 const TradersHubMenuHomepage = () => {
     const history = useHistory();
 
     return (
-        <div className='trading-hub-header__tradershub' onClick={() => history.push(routes.traders_hub)}>
+        <div className='traders-hub-header__tradershub' onClick={() => history.push(routes.traders_hub)}>
             <Icon icon='IcAppstoreMenuHomepage' size={30} />
         </div>
     );
@@ -33,12 +33,12 @@ const RedirectToOldInterface = () => {
         platform_store.setIsPreAppStore(false);
     };
     return (
-        <div className='trading-hub-header__redirect'>
-            <BinaryLink to={routes.trade} className='trading-hub-header__redirect--link' onClick={disablePreAppstore}>
+        <div className='traders-hub-header__redirect'>
+            <BinaryLink to={routes.trade} className='traders-hub-header__redirect--link' onClick={disablePreAppstore}>
                 <Text as='p' size='xs' color='general'>
                     <Localize i18n_default_text="Exit Trader's hub" />
                 </Text>
-                <Icon className='trading-hub-header__redirect--beta' icon='IcAppstoreTradersHubBeta' size={50} />
+                <Icon className='traders-hub-header__redirect--beta' icon='IcAppstoreTradersHubBeta' size={50} />
                 <Icon icon='IcArrowRight' size={18} color='red' />
             </BinaryLink>
         </div>
@@ -48,8 +48,8 @@ const RedirectToOldInterface = () => {
 const TradersHubOnboarding = ({ is_dark_mode, setIsOnboardingVisited }) => {
     const history = useHistory();
     return (
-        <div className='trading-hub-header__tradershub--onboarding'>
-            <div className='trading-hub-header__tradershub--onboarding--logo'>
+        <div className='traders-hub-header__tradershub--onboarding'>
+            <div className='traders-hub-header__tradershub--onboarding--logo'>
                 <Popover
                     classNameBubble='account-settings-toggle__tooltip'
                     alignment='bottom'
@@ -73,7 +73,7 @@ const TradersHubOnboarding = ({ is_dark_mode, setIsOnboardingVisited }) => {
 
 const ShowNotifications = ({ is_notifications_visible, notifications_count, toggleNotifications }) => {
     return (
-        <div className='trading-hub-header__notification'>
+        <div className='traders-hub-header__notification'>
             <ToggleNotifications
                 count={notifications_count}
                 is_visible={is_notifications_visible}
@@ -128,8 +128,8 @@ const TradersHubHeader = ({
     const { is_pre_appstore } = React.useContext(PlatformContext);
 
     return (
-        <header className='trading-hub-header'>
-            <div className='trading-hub-header__menu-left'>
+        <header className='traders-hub-header'>
+            <div className='traders-hub-header__menu-left'>
                 <MobileWrapper>
                     <ToggleMenuDrawer
                         ref={toggle_menu_drawer_ref}
@@ -165,16 +165,16 @@ const TradersHubHeader = ({
                     <TradersHubMenuHomepage />
                 </DesktopWrapper>
                 {is_dark_mode ? (
-                    <DerivBrandLogoDark className='trading-hub-header__logo' />
+                    <DerivBrandLogoDark className='traders-hub-header__logo' />
                 ) : (
-                    <DerivBrandLogo className='trading-hub-header__logo' />
+                    <DerivBrandLogo className='traders-hub-header__logo' />
                 )}
                 <Divider />
                 {menu_items && is_logged_in && replaceCashierMenuOnclick()}
                 <MemoizedMenuLinks is_logged_in={is_logged_in} items={menu_items} is_pre_appstore={is_pre_appstore} />
             </div>
             <DesktopWrapper>
-                <div className='trading-hub-header__menu-right'>
+                <div className='traders-hub-header__menu-right'>
                     <RedirectToOldInterface />
                     <Divider />
                     <TradersHubOnboarding is_dark_mode={is_dark_mode} setIsOnboardingVisited={setIsOnboardingVisited} />
@@ -190,7 +190,7 @@ const TradersHubHeader = ({
                         should_disable_pointer_events
                         zIndex={9999}
                     >
-                        <BinaryLink className='trading-hub-header__setting' to={routes.personal_details}>
+                        <BinaryLink className='traders-hub-header__setting' to={routes.personal_details}>
                             <Icon icon='IcUserOutline' size={20} />
                         </BinaryLink>
                     </Popover>
@@ -198,8 +198,8 @@ const TradersHubHeader = ({
                 <RealAccountSignup />
             </DesktopWrapper>
             <MobileWrapper>
-                <div className='trading-hub-header__mobile-parent'>
-                    <div className='trading-hub-header__menu-middle'>
+                <div className='traders-hub-header__mobile-parent'>
+                    <div className='traders-hub-header__menu-middle'>
                         <TradersHubOnboarding
                             is_dark_mode={is_dark_mode}
                             toggleIsTourOpen={toggleIsTourOpen}
@@ -220,12 +220,12 @@ const TradersHubHeader = ({
                             should_disable_pointer_events
                             zIndex={9999}
                         >
-                            <BinaryLink className='trading-hub-header__setting' to={routes.personal_details}>
+                            <BinaryLink className='traders-hub-header__setting' to={routes.personal_details}>
                                 <Icon icon='IcUserOutline' size={20} />
                             </BinaryLink>
                         </Popover>
                     </div>
-                    <div className='trading-hub-header__cashier-button'>
+                    <div className='traders-hub-header__cashier-button'>
                         <Button primary small onClick={() => history.push(routes.cashier_deposit)}>
                             <Localize i18n_default_text='Cashier' />
                         </Button>

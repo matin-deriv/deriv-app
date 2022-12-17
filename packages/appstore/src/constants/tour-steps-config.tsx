@@ -32,7 +32,7 @@ export const tour_step_config: Step[] = [
             </Text>
         ),
 
-        target: '.trading-hub-header__tradershub--onboarding--logo',
+        target: '.traders-hub-header__tradershub--onboarding--logo',
         disableBeacon: true,
     },
 ];
@@ -61,7 +61,7 @@ export const eu_tour_step_config: Step[] = [
             <Text as='p'>{localize(`Need help moving around?\n\nWe have a short turorial that might help.`)}</Text>
         ),
 
-        target: '.trading-hub-header__tradershub--onboarding--logo',
+        target: '.traders-hub-header__tradershub--onboarding--logo',
         disableBeacon: true,
     },
 ];

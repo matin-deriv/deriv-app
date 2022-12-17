@@ -19,7 +19,7 @@ const TradersHubMenuHomepage = () => {
     const redirect = useHistory();
     return (
         <div
-            className='trading-hub-header__tradershub'
+            className='traders-hub-header__tradershub'
             onClick={() => {
                 redirect.push(routes.traders_hub);
             }}
@@ -37,17 +37,17 @@ const RedirectToOldInterface = () => {
         platform_store.setIsPreAppStore(false);
     };
     return (
-        <div className='trading-hub-header__dtrader--redirect'>
+        <div className='traders-hub-header__dtrader--redirect'>
             <BinaryLink
                 to={routes.trade}
-                className='trading-hub-header__dtrader--redirect--link'
+                className='traders-hub-header__dtrader--redirect--link'
                 onClick={disablePreAppstore}
             >
                 <Text as='p' size='xs'>
                     <Localize i18n_default_text="Exit Trader's hub" />
                 </Text>
                 <Icon
-                    className='trading-hub-header__dtrader--redirect--beta'
+                    className='traders-hub-header__dtrader--redirect--beta'
                     icon='IcAppstoreTradersHubBeta'
                     size={45}
                 />

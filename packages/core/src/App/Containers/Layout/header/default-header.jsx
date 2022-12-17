@@ -77,16 +77,16 @@ const DefaultHeader = ({
             platform_store.setIsPreAppStore(false);
         };
         return (
-            <div className='trading-hub-header__redirect'>
+            <div className='traders-hub-header__redirect'>
                 <BinaryLink
                     to={routes.trade}
-                    className='trading-hub-header__redirect--link'
+                    className='traders-hub-header__redirect--link'
                     onClick={disablePreAppstore}
                 >
                     <Text as='p' size='xs' color='general'>
                         <Localize i18n_default_text="Exit Trader's hub" />
                     </Text>
-                    <Icon className='trading-hub-header__redirect--beta' icon='IcAppstoreTradersHubBeta' size={50} />
+                    <Icon className='traders-hub-header__redirect--beta' icon='IcAppstoreTradersHubBeta' size={50} />
                     <Icon icon='IcArrowRight' size={18} color='red' />
                 </BinaryLink>
             </div>
@@ -141,7 +141,7 @@ const DefaultHeader = ({
                         <Localize i18n_default_text="Explore Trader's hub" />
                     </Text>
                     <Icon
-                        className='trading-hub-header__dtrader--redirect--beta'
+                        className='traders-hub-header__dtrader--redirect--beta'
                         icon='IcAppstoreTradersHubBeta'
                         size={45}
                     />

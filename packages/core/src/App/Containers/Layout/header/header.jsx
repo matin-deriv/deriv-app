@@ -2,7 +2,7 @@ import React from 'react';
 import { PlatformContext, routes } from '@deriv/shared';
 import DefaultHeader from './default-header.jsx';
 import DashboardHeader from './dashboard-header.jsx';
-import TradersHubHeader from './trading-hub-header.jsx';
+import TradersHubHeader from './traders-hub-header.jsx';
 import DTraderHeader from './dtrader-header.jsx';
 import { connect } from 'Stores/connect';
 import { useLocation } from 'react-router-dom';

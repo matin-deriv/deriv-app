@@ -3,7 +3,7 @@ import { localize } from '@deriv/translations';
 import { isMobile, isDesktop, routes, PlatformContext } from '@deriv/shared';
 import { Button, Text, Icon, ProgressBarOnboarding } from '@deriv/components';
 import TradigPlatformIconProps from 'Assets/svgs/trading-platform';
-import { traders_hub_contents } from 'Constants/trading-hub-content';
+import { traders_hub_contents } from 'Constants/traders-hub-content';
 import { useHistory } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { useStores } from 'Stores';

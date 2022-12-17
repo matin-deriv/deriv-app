@@ -42,7 +42,7 @@ import TotalAssets from 'Components/total-assets';
 import Divider from 'Components/elements/divider';
 import { TAccountCategory } from 'Types';
 import { DetailsOfEachMT5Loginid } from '@deriv/api-types';
-import './trading-hub.scss';
+import './traders-hub.scss';
 
 const Tradershub: React.FC = () => {
     const store = useStores();
@@ -202,15 +202,15 @@ const Tradershub: React.FC = () => {
 
     return (
         <Div100vhContainer height_offset='40px' is_disabled={isDesktop()}>
-            <div id='trading-hub' className='trading-hub'>
-                <div className='trading-hub_header'>
-                    <div className='trading-hub_header--title'>
+            <div id='traders-hub' className='traders-hub'>
+                <div className='traders-hub_header'>
+                    <div className='traders-hub_header--title'>
                         <Text weight='bold' size={isMobile() ? 'xxs' : 'm'} align='left'>
                             {localize("Trader's hub")}
                         </Text>
                     </div>
-                    <div className='trading-hub_header--account'>
-                        <TotalAssets category={tab_account_type} className='trading-hub_header--account_assets' />
+                    <div className='traders-hub_header--account'>
+                        <TotalAssets category={tab_account_type} className='traders-hub_header--account_assets' />
                         <DesktopWrapper>
                             <ToggleAccountType
                                 accountTypeChange={(event: {
@@ -227,7 +227,7 @@ const Tradershub: React.FC = () => {
                         <MobileWrapper>
                             <Dropdown
                                 id='platfrom_toggle_options'
-                                className='trading-hub_header--platfrom_toggle_options'
+                                className='traders-hub_header--platfrom_toggle_options'
                                 is_alignment_left={false}
                                 is_nativepicker={false}
                                 list={account_toggle_options}
@@ -240,10 +240,10 @@ const Tradershub: React.FC = () => {
                     </div>
                 </div>
 
-                <div className='trading-hub_body'>
+                <div className='traders-hub_body'>
                     <DesktopWrapper>
                         <CFDAccounts account_type={tab_account_type} />
-                        <Divider horizontal className='trading-hub_body--divider' />
+                        <Divider horizontal className='traders-hub_body--divider' />
                         <OptionsAccounts
                             platformlauncherprops={is_eu ? mf_platform_config : platform_config}
                             accountType={tab_account_type}
@@ -252,7 +252,7 @@ const Tradershub: React.FC = () => {
                     <MobileWrapper>
                         <ButtonToggle
                             buttons_arr={platform_toggle_options}
-                            className='trading-hub_body--platform_type_toggle'
+                            className='traders-hub_body--platform_type_toggle'
                             has_rounded_button
                             is_animated
                             name='platforn_type'

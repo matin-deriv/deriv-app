@@ -1,7 +1,7 @@
 import React from 'react';
 import { PlatformContext, routes } from '@deriv/shared';
 import DefaultFooter from './default-footer';
-import TradersHubFooter from './trading-hub-footer';
+import TradersHubFooter from './traders-hub-footer';
 import { useLocation } from 'react-router-dom';
 
 const Footer = () => {
