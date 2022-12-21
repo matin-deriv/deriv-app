@@ -4,7 +4,7 @@ import { Field, FieldProps, useFormikContext } from 'formik';
 import { DesktopWrapper, Input, Icon, MobileWrapper, Text, useInterval } from '@deriv/components';
 import { getCurrencyDisplayCode } from '@deriv/shared';
 import { localize, Localize } from '@deriv/translations';
-import { TReactChangeEvent, TReactChildren } from 'Types';
+import { TReactChangeEvent, TReactChildren } from '../../types';
 import { useStore } from '@deriv/stores';
 import './crypto-fiat-converter.scss';
 

@@ -4,7 +4,7 @@ import { Link, useHistory } from 'react-router-dom';
 import { Dialog } from '@deriv/components';
 import { localize, Localize } from '@deriv/translations';
 import { routes } from '@deriv/shared';
-import { TError, TReactElement } from 'Types';
+import { TError, TReactElement } from '../../types';
 import { useStore } from '@deriv/stores';
 
 type TErrorDialogProps = {
