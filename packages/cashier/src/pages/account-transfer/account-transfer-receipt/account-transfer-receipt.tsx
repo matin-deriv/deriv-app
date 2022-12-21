@@ -14,7 +14,7 @@ type TSwitch = {
 };
 
 type TAccountTransferReceipt = {
-    onClose?: (e?: React.MouseEvent<HTMLElement>) => void;
+    onClose?: () => void;
     history: RouteComponentProps;
 };
 

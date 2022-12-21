@@ -405,7 +405,7 @@ const AccountTransferForm = ({ error, onClickDeposit, onClickNotes, setSideNotes
                                         {({ field }: FieldProps<string>) => (
                                             <Input
                                                 {...field}
-                                                onChange={e => {
+                                                onChange={(e: TReactChangeEvent) => {
                                                     setErrorMessage('');
                                                     handleChange(e);
                                                     setAccountTransferAmount(e.target.value);

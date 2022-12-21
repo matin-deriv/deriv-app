@@ -1,7 +1,8 @@
 import { action, computed, makeObservable, observable } from 'mobx';
-import Constants from 'Constants/constants';
+import Constants from '../constants/constants';
 import ErrorStore from './error-store';
-import { TRootStore, TWebSocket } from 'Types';
+import { TRootStore, TServerError, TWebSocket } from '../types';
+import type { DetailsOfEachMT5Loginid } from '@deriv/api-types';
 
 export default class DepositStore {
     constructor(public WS: TWebSocket, public root_store: TRootStore) {
@@ -106,7 +107,8 @@ export default class DepositStore {
         const need_tnc =
             (is_eu ||
                 mt5_login_list.some(
-                    item => item.account_type === 'real' && item.sub_account_type === 'financial_stp'
+                    (item: DetailsOfEachMT5Loginid) =>
+                        item.account_type === 'real' && item.sub_account_type === 'financial_stp'
                 )) &&
             is_tnc_needed;
 
@@ -130,7 +132,7 @@ export default class DepositStore {
     }
 
     submitFundsProtection(): void {
-        this.WS.send({ ukgc_funds_protection: 1, tnc_approval: 1 }).then(response => {
+        this.WS.send({ ukgc_funds_protection: 1, tnc_approval: 1 }).then((response: { error: TServerError }) => {
             if (response.error) {
                 this.error.setMessage(response.error.message);
             } else {

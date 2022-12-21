@@ -5,7 +5,7 @@ import { CryptoConfig, getCurrencyName, isCryptocurrency, isMobile } from '@deri
 import { useStore } from '@deriv/stores';
 import QRCode from 'qrcode.react';
 import { observer } from 'mobx-react-lite';
-import RecentTransaction from 'Components/recent-transaction';
+import RecentTransaction from '../../../components/recent-transaction';
 import './crypto-deposit.scss';
 
 const CryptoDeposit = () => {

@@ -5,7 +5,7 @@ import { Localize, localize } from '@deriv/translations';
 import { routes, WS } from '@deriv/shared';
 import { useStore } from '@deriv/stores';
 import { observer } from 'mobx-react-lite';
-import CashierLocked from 'Components/cashier-locked';
+import CashierLocked from '../../../components/cashier-locked';
 
 const DepositLocked = () => {
     const { client, modules } = useStore();
