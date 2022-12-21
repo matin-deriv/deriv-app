@@ -135,7 +135,6 @@ const CFDsListing = () => {
                             key={`trading_app_card_${account.name}`}
                             type='transfer_trade'
                             availability={selected_region}
-                            is_disabled={!is_demo ? !has_no_real_account : account.is_disabled}
                         />
                     ))
                 ) : (
@@ -144,7 +143,6 @@ const CFDsListing = () => {
                         name={account.name}
                         platform={account.platform}
                         description={account.description}
-                        is_disabled={account.is_disabled}
                         onAction={() => {
                             getAccount(account.market_type, account.platform);
                         }}

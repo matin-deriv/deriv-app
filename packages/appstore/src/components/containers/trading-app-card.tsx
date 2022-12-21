@@ -6,15 +6,16 @@ import './trading-app-card.scss';
 import TradingAppCardActions, { Actions } from './trading-app-card-actions';
 import { AvailableAccount, TDetailsOfEachMT5Loginid } from 'Types';
 import { isMobile } from '@deriv/shared';
+import classNames from 'classnames';
 
 const TradingAppCard = ({
     name,
     icon,
     type,
     description,
-    is_disabled,
     onAction,
     sub_title,
+    has_divider,
 }: Actions & BrandConfig & AvailableAccount & TDetailsOfEachMT5Loginid) => {
     const { app_desc, link_to } = platform_config.find(config => config.name === name) || {
         app_desc: description,
@@ -24,7 +25,7 @@ const TradingAppCard = ({
     return (
         <div className='trading-app-card'>
             <TradigPlatformIconProps icon={icon} size={icon_size} />
-            <div className='trading-app-card__details'>
+            <div className={classNames('trading-app-card__details', { 'trading-app-card--divider': has_divider })}>
                 <Text className='title' size='xs' line_height='s'>
                     {sub_title}
                 </Text>
@@ -35,8 +36,8 @@ const TradingAppCard = ({
                     {app_desc}
                 </Text>
             </div>
-            <div className='trading-app-card__actions'>
-                <TradingAppCardActions type={type} link_to={link_to} is_disabled={is_disabled} onAction={onAction} />
+            <div className={classNames('trading-app-card__actions', { 'trading-app-card--divider': has_divider })}>
+                <TradingAppCardActions type={type} link_to={link_to} onAction={onAction} />
             </div>
         </div>
     );
