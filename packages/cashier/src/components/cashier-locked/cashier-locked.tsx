@@ -1,6 +1,6 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
-import EmptyState from 'Components/empty-state';
+import EmptyState from '../empty-state';
 import getMessage from './cashier-locked-provider';
 import { useStore } from '@deriv/stores';
 

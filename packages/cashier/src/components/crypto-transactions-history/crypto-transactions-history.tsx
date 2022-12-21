@@ -3,7 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { DataList, Icon, Loading, MobileWrapper, Table, Text } from '@deriv/components';
 import { isDesktop, isMobile, routes } from '@deriv/shared';
 import { localize, Localize } from '@deriv/translations';
-import { TCryptoTransactionDetails } from 'Types';
+import { TCryptoTransactionDetails } from '../../types';
 import CryptoTransactionsCancelModal from './crypto-transactions-cancel-modal';
 import CryptoTransactionsStatusModal from './crypto-transactions-status-modal';
 import CryptoTransactionsRenderer from './crypto-transactions-renderer';

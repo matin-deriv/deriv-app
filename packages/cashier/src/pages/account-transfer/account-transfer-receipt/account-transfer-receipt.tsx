@@ -1,4 +1,5 @@
 import React from 'react';
+import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Button, Modal, Icon, Text } from '@deriv/components';
@@ -12,7 +13,12 @@ type TSwitch = {
     currency?: string;
 };
 
-const AccountTransferReceipt = ({ history }: RouteComponentProps) => {
+type TAccountTransferReceipt = {
+    onClose?: (e?: React.MouseEvent<HTMLElement>) => void;
+    history: RouteComponentProps;
+};
+
+const AccountTransferReceipt = ({ onClose, history }: TAccountTransferReceipt) => {
     const {
         ui,
         common,
@@ -24,11 +30,13 @@ const AccountTransferReceipt = ({ history }: RouteComponentProps) => {
 
     const { disableApp, enableApp } = ui;
     const { is_from_derivgo } = common;
-    const { loginid, switchAccount } = client;
-    const { receipt, resetAccountTransfer, selected_from, selected_to } = account_transfer;
+    const { is_pre_appstore, loginid, switchAccount } = client;
+    const { receipt, resetAccountTransfer, selected_from, selected_to, setShouldSwitchAccout } = account_transfer;
 
     const [is_switch_visible, setIsSwitchVisible] = React.useState(false);
     const [switch_to, setSwitchTo] = React.useState<TSwitch>({});
+
+    const is_from_pre_appstore = is_pre_appstore && !location.pathname.startsWith(routes.cashier);
 
     React.useEffect(() => {
         return () => {
@@ -62,13 +70,19 @@ const AccountTransferReceipt = ({ history }: RouteComponentProps) => {
         } else {
             // if the account transferred to is a Deriv MT5 account that can't be switched to, switch to from account instead
             // otherwise switch to the account transferred to
+            setShouldSwitchAccout();
             setSwitchTo(selected_to.is_mt ? selected_from : selected_to);
             toggleSwitchAlert();
         }
     };
 
     return (
-        <div className='account-transfer-receipt__crypto'>
+        <div
+            className={classNames(
+                'account-transfer-receipt__crypto',
+                !is_from_pre_appstore && 'account-transfer-receipt__crypto-padding'
+            )}
+        >
             <Text as='h2' color='prominent' align='center' weight='bold' className='cashier__header'>
                 <Localize i18n_default_text='Your funds have been transferred' />
             </Text>
@@ -125,14 +139,26 @@ const AccountTransferReceipt = ({ history }: RouteComponentProps) => {
                         large
                     />
                 )}
-                <Button
-                    className='account-transfer-receipt__button'
-                    has_effect
-                    text={localize('Make a new transfer')}
-                    onClick={resetAccountTransfer}
-                    primary
-                    large
-                />
+                {is_from_pre_appstore && (
+                    <Button
+                        className='account-transfer-receipt__button'
+                        has_effect
+                        text={localize('Close')}
+                        onClick={onClose}
+                        primary
+                        large
+                    />
+                )}
+                {!is_from_pre_appstore && (
+                    <Button
+                        className='account-transfer-receipt__button'
+                        has_effect
+                        text={localize('Make a new transfer')}
+                        onClick={resetAccountTransfer}
+                        primary
+                        large
+                    />
+                )}
             </div>
             <Modal
                 is_open={is_switch_visible}

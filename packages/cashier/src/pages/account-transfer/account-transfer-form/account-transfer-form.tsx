@@ -14,18 +14,20 @@ import {
 } from '@deriv/shared';
 import { localize, Localize } from '@deriv/translations';
 import { useStore } from '@deriv/stores';
-import { TReactChangeEvent, TAccount, TAccountsList, TSideNotesProps } from 'Types';
-import CryptoFiatConverter from 'Components/crypto-fiat-converter';
-import ErrorDialog from 'Components/error-dialog';
-import PercentageSelector from 'Components/percentage-selector';
-import RecentTransaction from 'Components/recent-transaction';
+import { TReactChangeEvent, TAccount, TAccountsList, TSideNotesProps } from '../../../types';
+import CryptoFiatConverter from '../../../components/crypto-fiat-converter';
+import ErrorDialog from '../../../components/error-dialog';
+import PercentageSelector from '../../../components/percentage-selector';
+import RecentTransaction from '../../../components/recent-transaction';
 import AccountTransferNote from './account-transfer-form-side-note';
-import SideNote from 'Components/side-note';
+import SideNote from '../../../components/side-note';
 import './account-transfer-form.scss';
 
 type TAccountTransferFormProps = {
-    error: object;
-    setSideNotes: (notes: TSideNotesProps) => void;
+    error?: object;
+    onClickDeposit?: () => void;
+    onClickNotes?: () => void;
+    setSideNotes?: (notes: TSideNotesProps) => void;
 };
 
 const AccountOption = ({ account, idx }: TAccountsList) => {
@@ -69,13 +71,13 @@ let accounts_to: Array<TAccount> = [];
 let mt_accounts_to: Array<TAccount> = [];
 let dxtrade_accounts_to: Array<TAccount> = [];
 
-const AccountTransferForm = ({ error, setSideNotes }: TAccountTransferFormProps) => {
+const AccountTransferForm = ({ error, onClickDeposit, onClickNotes, setSideNotes }: TAccountTransferFormProps) => {
     const {
         client,
         modules: { cashier },
     } = useStore();
 
-    const { account_limits, authentication_status, is_dxtrade_allowed, getLimits: onMount } = client;
+    const { account_limits, authentication_status, is_dxtrade_allowed, is_pre_appstore, getLimits: onMount } = client;
     const { account_transfer, crypto_fiat_converter, transaction_history, general_store } = cashier;
 
     const {
@@ -110,6 +112,8 @@ const AccountTransferForm = ({ error, setSideNotes }: TAccountTransferFormProps)
     const [from_accounts, setFromAccounts] = React.useState({});
     const [to_accounts, setToAccounts] = React.useState({});
     const [transfer_to_hint, setTransferToHint] = React.useState<string>();
+
+    const is_from_pre_appstore = is_pre_appstore && !location.pathname.startsWith(routes.cashier);
 
     const { daily_transfers } = account_limits;
     const mt5_remaining_transfers = daily_transfers?.mt5;
@@ -303,17 +307,29 @@ const AccountTransferForm = ({ error, setSideNotes }: TAccountTransferFormProps)
         return null;
     };
 
+    const NotesLink = () => {
+        return (
+            <div className='account-transfer-form__button-link' onClick={onClickNotes}>
+                <Text size='xs' weight='bold' color='red'>
+                    <Localize i18n_default_text='Notes ' />
+                </Text>
+            </div>
+        );
+    };
+
     return (
         <div className='cashier__wrapper account-transfer-form__wrapper' data-testid='dt_account_transfer_form_wrapper'>
-            <Text
-                as='h2'
-                color='prominent'
-                weight='bold'
-                align='center'
-                className='cashier__header cashier__content-header'
-            >
-                {localize('Transfer between your accounts in Deriv')}
-            </Text>
+            {!is_from_pre_appstore && (
+                <Text
+                    as='h2'
+                    color='prominent'
+                    weight='bold'
+                    align='center'
+                    className='cashier__header cashier__content-header'
+                >
+                    {localize('Transfer between your accounts in Deriv')}
+                </Text>
+            )}
             <Formik
                 initialValues={{
                     amount: account_transfer_amount || '',
@@ -394,7 +410,10 @@ const AccountTransferForm = ({ error, setSideNotes }: TAccountTransferFormProps)
                                                     handleChange(e);
                                                     setAccountTransferAmount(e.target.value);
                                                 }}
-                                                className='cashier__input dc-input--no-placeholder account-transfer-form__input'
+                                                className={classNames(
+                                                    'cashier__input dc-input--no-placeholder account-transfer-form__input',
+                                                    !is_from_pre_appstore && 'account-transfer-form__input-fit-content'
+                                                )}
                                                 classNameHint={classNames('account-transfer-form__hint', {
                                                     'account-transfer-form__hint__disabled': is_mt5_restricted,
                                                 })}
@@ -493,9 +512,27 @@ const AccountTransferForm = ({ error, setSideNotes }: TAccountTransferFormProps)
                                     </div>
                                 )}
                                 <div
-                                    className='cashier__form-submit account-transfer-form__form-submit'
+                                    className={classNames(
+                                        'cashier__form-submit',
+                                        is_from_pre_appstore
+                                            ? 'account-transfer-form__form-buttons'
+                                            : 'account-transfer-form__form-submit'
+                                    )}
                                     data-testid='dt_account_transfer_form_submit'
                                 >
+                                    {is_from_pre_appstore && (
+                                        <React.Fragment>
+                                            <NotesLink />
+                                            <Button
+                                                className='account-transfer-form__deposit-button'
+                                                secondary
+                                                large
+                                                onClick={onClickDeposit}
+                                            >
+                                                <Localize i18n_default_text='Deposit' />
+                                            </Button>
+                                        </React.Fragment>
+                                    )}
                                     <Button
                                         className='account-transfer-form__submit-button'
                                         type='submit'
@@ -517,23 +554,27 @@ const AccountTransferForm = ({ error, setSideNotes }: TAccountTransferFormProps)
                                         <Localize i18n_default_text='Transfer' />
                                     </Button>
                                 </div>
-                                <SideNote title={<Localize i18n_default_text='Notes' />} is_mobile>
-                                    {is_crypto && crypto_transactions?.length ? <RecentTransaction /> : null}
-                                    <AccountTransferNote
-                                        allowed_transfers_count={{
-                                            internal: internal_remaining_transfers?.allowed,
-                                            mt5: mt5_remaining_transfers?.allowed,
-                                            dxtrade: dxtrade_remaining_transfers?.allowed,
-                                        }}
-                                        transfer_fee={transfer_fee}
-                                        currency={selected_from.currency}
-                                        minimum_fee={minimum_fee}
-                                        is_crypto_to_crypto_transfer={selected_from.is_crypto && selected_to.is_crypto}
-                                        is_dxtrade_allowed={is_dxtrade_allowed}
-                                        is_dxtrade_transfer={is_dxtrade_transfer}
-                                        is_mt_transfer={is_mt_transfer}
-                                    />
-                                </SideNote>
+                                {!is_from_pre_appstore && (
+                                    <SideNote title={<Localize i18n_default_text='Notes' />} is_mobile>
+                                        {is_crypto && crypto_transactions?.length ? <RecentTransaction /> : null}
+                                        <AccountTransferNote
+                                            allowed_transfers_count={{
+                                                internal: internal_remaining_transfers?.allowed,
+                                                mt5: mt5_remaining_transfers?.allowed,
+                                                dxtrade: dxtrade_remaining_transfers?.allowed,
+                                            }}
+                                            transfer_fee={transfer_fee}
+                                            currency={selected_from.currency}
+                                            minimum_fee={minimum_fee}
+                                            is_crypto_to_crypto_transfer={
+                                                selected_from.is_crypto && selected_to.is_crypto
+                                            }
+                                            is_dxtrade_allowed={is_dxtrade_allowed}
+                                            is_dxtrade_transfer={is_dxtrade_transfer}
+                                            is_mt_transfer={is_mt_transfer}
+                                        />
+                                    </SideNote>
+                                )}
                                 <ErrorDialog error={error} />
                             </Form>
                         )}

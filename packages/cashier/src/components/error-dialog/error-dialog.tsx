@@ -8,8 +8,8 @@ import { TError, TReactElement } from 'Types';
 import { useStore } from '@deriv/stores';
 
 type TErrorDialogProps = {
-    className: string;
-    error: TError | Record<string, never>;
+    className?: string;
+    error?: TError | Record<string, never>;
 };
 
 type TSetDetails = {

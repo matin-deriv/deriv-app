@@ -3,6 +3,8 @@ import * as React from 'react';
 import { observer } from 'mobx-react-lite';
 import { setWebsocket, routes } from '@deriv/shared';
 import Routes from 'Components/routes/routes';
+import { StoreProvider } from '@deriv/stores';
+import AccountTransferModal from 'Components/account-transfer-modal';
 import { useStores, initContext } from 'Stores';
 import { TRootStore } from 'Types';
 import './app.scss';
@@ -21,17 +23,20 @@ const App: React.FC<TAppProps> = ({ passthrough }: TAppProps) => {
     const { ui }: TRootStore = useStores();
 
     return (
-        <main
-            className={classNames('dashboard', {
-                'theme--light': !ui.is_dark_mode_on,
-                'theme--dark': ui.is_dark_mode_on,
-                'dashboard-onboarding': window.location.pathname === routes.onboarding,
-            })}
-        >
-            <div className='dw-dashboard'>
-                <Routes />
-            </div>
-        </main>
+        <StoreProvider store={root_store as any}>
+            <main
+                className={classNames('dashboard', {
+                    'theme--light': !ui.is_dark_mode_on,
+                    'theme--dark': ui.is_dark_mode_on,
+                    'dashboard-onboarding': window.location.pathname === routes.onboarding,
+                })}
+            >
+                <div className='dw-dashboard'>
+                    <Routes />
+                    <AccountTransferModal />
+                </div>
+            </main>
+        </StoreProvider>
     );
 };
 
