@@ -4,7 +4,6 @@ import { observer } from 'mobx-react-lite';
 import { setWebsocket, routes } from '@deriv/shared';
 import Routes from 'Components/routes/routes';
 import { StoreProvider } from '@deriv/stores';
-import AccountTransferModal from 'Components/account-transfer-modal';
 import { useStores, initContext } from 'Stores';
 import { TRootStore } from 'Types';
 import './app.scss';
@@ -33,7 +32,6 @@ const App: React.FC<TAppProps> = ({ passthrough }: TAppProps) => {
             >
                 <div className='dw-dashboard'>
                     <Routes />
-                    <AccountTransferModal />
                 </div>
             </main>
         </StoreProvider>

@@ -7,8 +7,13 @@ import { useStore } from '@deriv/stores';
 import { Localize } from '@deriv/translations';
 import AccountTransfer from '@deriv/cashier/src/pages/account-transfer';
 
-const AccountTransferModal = () => {
-    const [is_open, setIsOpen] = React.useState<boolean>(true);
+type TAccountTransferModal = {
+    is_modal_open: boolean;
+    toggleModal: (e?: React.MouseEvent<HTMLElement>) => void;
+};
+
+const AccountTransferModal = ({ is_modal_open, toggleModal }: TAccountTransferModal) => {
+    const [is_open, setIsOpen] = React.useState<boolean>(is_modal_open);
 
     const {
         modules: {
@@ -21,10 +26,6 @@ const AccountTransferModal = () => {
     const history = useHistory();
 
     const modal_title = !is_transfer_confirm && <Localize i18n_default_text={'Transfer funds to your account'} />;
-
-    const toggleModal = () => {
-        setIsOpen(false);
-    };
 
     const onClickDeposit = () => {
         setIsOpen(false);
