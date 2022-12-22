@@ -3,16 +3,19 @@ import React from 'react';
 import { withRouter, useHistory } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { Text } from '@deriv/components';
-import { isMobile, routes, PlatformContext } from '@deriv/shared';
+import { isMobile, routes } from '@deriv/shared';
 import { Localize } from '@deriv/translations';
 import { useStore } from '@deriv/stores';
 import './virtual.scss';
 
-const Virtual = () => {
+type TVirtual = {
+    is_pre_appstore: boolean;
+};
+
+const Virtual = ({ is_pre_appstore }: TVirtual) => {
     const {
         ui: { is_dark_mode_on, toggleAccountsDialog },
     } = useStore();
-    const { is_pre_appstore } = React.useContext(PlatformContext);
     const history = useHistory();
 
     return (
