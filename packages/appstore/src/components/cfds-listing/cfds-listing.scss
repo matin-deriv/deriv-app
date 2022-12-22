@@ -1175,6 +1175,13 @@
                 grid-template-columns: 0.9fr 0.72fr 0.67fr 2.04fr 0.7fr 0.9fr;
             }
         }
+
+        &--platform {
+            &__pre-appstore {
+                grid-template-columns: 0.9fr 4.13fr 0.9fr;
+            }
+        }
+
         &--instruments {
             grid-template-columns: 0.9fr 1.39fr 1.39fr 0.65fr 0.7fr;
             &__pre-appstore {

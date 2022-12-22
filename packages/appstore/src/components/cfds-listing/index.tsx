@@ -12,7 +12,7 @@ import { AvailableAccount, TDetailsOfEachMT5Loginid } from 'Types';
 import PlatformLoader from 'Components/pre-loader/platform-loader';
 
 const CFDsListing = () => {
-    const { traders_hub, client } = useStores();
+    const { traders_hub, modules } = useStores();
     const {
         available_dxtrade_accounts,
         available_mt5_accounts,
@@ -24,7 +24,8 @@ const CFDsListing = () => {
         getExistingAccounts,
         getAccount,
     } = traders_hub;
-    const { is_eu, is_landing_company_loaded } = client;
+
+    const { toggleCompareAccountsModal } = modules.cfd;
     const has_no_real_account = !has_any_real_account;
 
     const accounts_sub_text = is_eu ? localize('Account Information') : localize('Compare accounts');
@@ -41,15 +42,16 @@ const CFDsListing = () => {
         <ListingContainer
             title={
                 !isMobile() && (
-                    <Text size='sm' line_height='m' weight='bold'>
-                        <Localize
-                            i18n_default_text='CFDs<0>{{accounts_sub_text}}</0>'
-                            values={{ accounts_sub_text }}
-                            components={[
-                                <Text key={0} color='red' size='xxxs' weight='bold' styles={{ marginLeft: '1rem' }} />,
-                            ]}
-                        />
-                    </Text>
+                    <div className='cfd-accounts__title'>
+                        <Text size='sm' line_height='m' weight='bold'>
+                            {localize('CFDs')}
+                        </Text>
+                        <div onClick={toggleCompareAccountsModal}>
+                            <Text key={0} color='red' size='xxs' weight='bold' styles={{ marginLeft: '1rem' }}>
+                                <Localize i18n_default_text={accounts_sub_text} />
+                            </Text>
+                        </div>
+                    </div>
                 )
             }
             description={
