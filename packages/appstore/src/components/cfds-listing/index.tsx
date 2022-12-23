@@ -158,6 +158,9 @@ const CFDsListing = () => {
                                 type='transfer_trade'
                                 availability={selected_region}
                                 is_disabled={!is_demo ? !has_no_real_account : account.is_disabled}
+                                onAction={() => {
+                                    startTrade(account.platform, existing_account);
+                                }}
                             />
                         ))
                     ) : (
