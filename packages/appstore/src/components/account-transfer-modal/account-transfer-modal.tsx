@@ -9,7 +9,7 @@ import AccountTransfer from '@deriv/cashier/src/pages/account-transfer';
 
 type TAccountTransferModal = {
     is_modal_open: boolean;
-    toggleModal: (e?: React.MouseEvent<HTMLElement>) => void;
+    toggleModal: (e?: boolean) => void;
 };
 
 const AccountTransferModal = ({ is_modal_open, toggleModal }: TAccountTransferModal) => {
@@ -29,7 +29,6 @@ const AccountTransferModal = ({ is_modal_open, toggleModal }: TAccountTransferMo
 
     const onClickDeposit = () => {
         setIsOpen(false);
-        history.push(routes.cashier_deposit);
     };
 
     const onClickNotes = () => {
@@ -41,7 +40,7 @@ const AccountTransferModal = ({ is_modal_open, toggleModal }: TAccountTransferMo
         <Modal
             className={should_switch_account ? 'account-transfer-modal' : ''}
             has_close_icon={!is_transfer_confirm}
-            is_open={is_open}
+            is_open={is_open && is_modal_open}
             is_title_centered={is_transfer_confirm}
             small
             title={modal_title}

@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import React from 'react';
-import { withRouter, useHistory } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { Text } from '@deriv/components';
 import { isMobile, routes } from '@deriv/shared';
@@ -66,4 +66,4 @@ const Virtual = ({ is_pre_appstore }: TVirtual) => {
     );
 };
 
-export default observer(withRouter(Virtual));
+export default observer(Virtual);

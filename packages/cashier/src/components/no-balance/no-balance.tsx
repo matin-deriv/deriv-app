@@ -1,12 +1,12 @@
 import React from 'react';
-import { RouteComponentProps, withRouter } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { Button, Icon, Text } from '@deriv/components';
 import { routes, getCurrencyDisplayCode } from '@deriv/shared';
 import { localize, Localize } from '@deriv/translations';
 import { useStore } from '@deriv/stores';
 
-const NoBalance = ({ history }: RouteComponentProps) => {
+const NoBalance = () => {
     const {
         client: { currency },
         modules: {
@@ -16,6 +16,8 @@ const NoBalance = ({ history }: RouteComponentProps) => {
             },
         },
     } = useStore();
+
+    const history = useHistory();
 
     const onClickDeposit = () => {
         // index of deposit tab in the cashier modal is 0
@@ -51,4 +53,4 @@ const NoBalance = ({ history }: RouteComponentProps) => {
     );
 };
 
-export default observer(withRouter(NoBalance));
+export default observer(NoBalance);

@@ -9,6 +9,10 @@ import CryptoTransactionsStatusModal from './crypto-transactions-status-modal';
 import CryptoTransactionsRenderer from './crypto-transactions-renderer';
 import { useStore } from '@deriv/stores';
 
+type TCryptoTransactionDetailsRow = {
+    row: TCryptoTransactionDetails;
+};
+
 const getHeaders = () => [
     { text: localize('Transaction') },
     { text: localize('Amount') },
@@ -78,7 +82,7 @@ const CryptoTransactionsHistory = () => {
                                 <DataList
                                     data_list_className='crypto-transactions-history__data-list'
                                     data_source={crypto_transactions}
-                                    rowRenderer={(row_props: TCryptoTransactionDetails) => (
+                                    rowRenderer={(row_props: TCryptoTransactionDetailsRow) => (
                                         <CryptoTransactionsRenderer {...row_props} />
                                     )}
                                     keyMapper={(row: TCryptoTransactionDetails) => row.id}

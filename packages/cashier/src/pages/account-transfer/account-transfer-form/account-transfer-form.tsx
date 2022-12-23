@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { Field, FieldProps, Formik, Form } from 'formik';
 import { observer } from 'mobx-react-lite';
 import { Button, Dropdown, Icon, Input, Loading, Money, Text } from '@deriv/components';
@@ -124,6 +124,8 @@ const AccountTransferForm = ({ error, onClickDeposit, onClickNotes, setSideNotes
     const is_dxtrade_transfer = selected_to.is_dxtrade || selected_from.is_dxtrade;
 
     const platform_name_dxtrade = getPlatformSettings('dxtrade').name;
+
+    const history = useHistory();
 
     React.useEffect(() => {
         recentTransactionOnMount();
@@ -299,6 +301,13 @@ const AccountTransferForm = ({ error, onClickDeposit, onClickNotes, setSideNotes
             components={[<Link key={0} to={routes.proof_of_address} className='link dark' />]}
         />
     );
+
+    const depositClick = () => {
+        if (onClickDeposit) {
+            onClickDeposit();
+        }
+        history.push(routes.cashier_deposit);
+    };
 
     const getMt5Error = () => {
         if (is_mt5_restricted) {
@@ -514,24 +523,20 @@ const AccountTransferForm = ({ error, onClickDeposit, onClickNotes, setSideNotes
                                 <div
                                     className={classNames(
                                         'cashier__form-submit',
-                                        is_from_pre_appstore
-                                            ? 'account-transfer-form__form-buttons'
-                                            : 'account-transfer-form__form-submit'
+                                        'account-transfer-form__form-buttons'
                                     )}
                                     data-testid='dt_account_transfer_form_submit'
                                 >
-                                    {is_from_pre_appstore && (
-                                        <React.Fragment>
-                                            <NotesLink />
-                                            <Button
-                                                className='account-transfer-form__deposit-button'
-                                                secondary
-                                                large
-                                                onClick={onClickDeposit}
-                                            >
-                                                <Localize i18n_default_text='Deposit' />
-                                            </Button>
-                                        </React.Fragment>
+                                    {is_from_pre_appstore && <NotesLink />}
+                                    {is_pre_appstore && (
+                                        <Button
+                                            className='account-transfer-form__deposit-button'
+                                            secondary
+                                            large
+                                            onClick={depositClick}
+                                        >
+                                            <Localize i18n_default_text='Deposit' />
+                                        </Button>
                                     )}
                                     <Button
                                         className='account-transfer-form__submit-button'

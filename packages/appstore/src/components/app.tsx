@@ -6,6 +6,7 @@ import Routes from 'Components/routes/routes';
 import { StoreProvider } from '@deriv/stores';
 import { useStores, initContext } from 'Stores';
 import { TRootStore } from 'Types';
+import AccountTransferModal from 'Components/account-transfer-modal';
 import './app.scss';
 
 type TAppProps = {
@@ -21,6 +22,8 @@ const App: React.FC<TAppProps> = ({ passthrough }: TAppProps) => {
     setWebsocket(WS);
     const { ui }: TRootStore = useStores();
 
+    const [is_open, setIsOpen] = React.useState<boolean>(true);
+
     return (
         <StoreProvider store={root_store as any}>
             <main
@@ -32,6 +35,7 @@ const App: React.FC<TAppProps> = ({ passthrough }: TAppProps) => {
             >
                 <div className='dw-dashboard'>
                     <Routes />
+                    <AccountTransferModal is_modal_open={is_open} toggleModal={() => setIsOpen(false)} />
                 </div>
             </main>
         </StoreProvider>
