@@ -175,6 +175,9 @@ const CFDsListing = () => {
                                 key={`trading_app_card_${existing_account.display_login}`}
                                 type='transfer_trade'
                                 availability={selected_region}
+                                onAction={() => {
+                                    startTrade(account.platform, existing_account);
+                                }}
                             />
                         ))
                     ) : (
