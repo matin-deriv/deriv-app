@@ -5,7 +5,6 @@ import { platform_config, mf_platform_config, BrandConfig } from 'Constants/plat
 import './trading-app-card.scss';
 import TradingAppCardActions, { Actions } from './trading-app-card-actions';
 import { AvailableAccount, TDetailsOfEachMT5Loginid } from 'Types';
-import { isMobile } from '@deriv/shared';
 import { useStores } from 'Stores/index';
 import { observer } from 'mobx-react-lite';
 import classNames from 'classnames';
@@ -19,8 +18,7 @@ const TradingAppCard = ({
     onAction,
     sub_title,
     has_divider,
-    short_code,
-    region,
+    short_code_and_region,
 }: Actions & BrandConfig & AvailableAccount & TDetailsOfEachMT5Loginid) => {
     const { client } = useStores();
 
@@ -40,11 +38,8 @@ const TradingAppCard = ({
                     <Text className='title' size='xs' line_height='s'>
                         {sub_title}
                     </Text>
-                    {short_code && (
-                        <span className='trading-app-card__details__short-code'>
-                            {short_code}
-                            {region}
-                        </span>
+                    {short_code_and_region && (
+                        <span className='trading-app-card__details__short-code'>{short_code_and_region}</span>
                     )}
                 </div>
                 <Text className='title' size='xs' line_height='s' weight='bold'>

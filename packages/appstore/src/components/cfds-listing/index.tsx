@@ -35,21 +35,22 @@ const CFDsListing = () => {
 
     const accounts_sub_text = is_eu ? localize('Account Information') : localize('Compare accounts');
 
-    const getShortCode = (account: TDetailsOfEachMT5Loginid) => {
-        let short_code;
+    const getShortCodeAndRegion = (account: TDetailsOfEachMT5Loginid) => {
+        let short_code_and_region;
         if (!is_demo && !is_eu_user) {
-            short_code =
+            short_code_and_region =
                 account.landing_company_short &&
                 account.landing_company_short !== 'svg' &&
                 account.landing_company_short !== 'bvi'
                     ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
                     : account.landing_company_short?.toUpperCase();
+            short_code_and_region =
+                account.market_type !== 'financial' && account.landing_company_short !== 'bvi'
+                    ? `${short_code_and_region} - ${account?.server_info?.geolocation?.region}`
+                    : short_code_and_region;
         }
-        return short_code || '';
+        return short_code_and_region || '';
     };
-
-    const getAccountRegion = (account: TDetailsOfEachMT5Loginid) =>
-        !is_demo && !is_eu_user ? ` - ${account?.server_info?.geolocation?.region}` : '';
 
     return (
         <ListingContainer
@@ -111,8 +112,7 @@ const CFDsListing = () => {
                                     existing_account.display_balance,
                                     true
                                 )} ${existing_account.currency}`}
-                                short_code={getShortCode(existing_account)}
-                                region={account.market_type !== 'financial' ? getAccountRegion(existing_account) : ''}
+                                short_code_and_region={getShortCodeAndRegion(existing_account)}
                                 platform={account.platform}
                                 description={existing_account.display_login}
                                 key={`trading_app_card_${account.name}`}
