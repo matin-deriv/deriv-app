@@ -36,12 +36,20 @@ const CFDsListing = () => {
     const accounts_sub_text = is_eu ? localize('Account Information') : localize('Compare accounts');
 
     const getShortCode = (account: TDetailsOfEachMT5Loginid) => {
-        return account.landing_company_short &&
-            account.landing_company_short !== 'svg' &&
-            account.landing_company_short !== 'bvi'
-            ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
-            : account.landing_company_short?.toUpperCase();
+        let short_code;
+        if (!is_demo && !is_eu_user) {
+            short_code =
+                account.landing_company_short &&
+                account.landing_company_short !== 'svg' &&
+                account.landing_company_short !== 'bvi'
+                    ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
+                    : account.landing_company_short?.toUpperCase();
+        }
+        return short_code || '';
     };
+
+    const getAccountRegion = (account: TDetailsOfEachMT5Loginid) =>
+        !is_demo && !is_eu_user ? ` - ${account?.server_info?.geolocation?.region}` : '';
 
     return (
         <ListingContainer
@@ -103,6 +111,8 @@ const CFDsListing = () => {
                                     existing_account.display_balance,
                                     true
                                 )} ${existing_account.currency}`}
+                                short_code={getShortCode(existing_account)}
+                                region={account.market_type !== 'financial' ? getAccountRegion(existing_account) : ''}
                                 platform={account.platform}
                                 description={existing_account.display_login}
                                 key={`trading_app_card_${account.name}`}

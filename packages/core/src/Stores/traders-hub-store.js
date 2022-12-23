@@ -67,7 +67,6 @@ export default class TradersHubStore extends BaseStore {
             () => {
                 this.getAvailablePlatforms();
                 this.getAvailableCFDAccounts();
-                this.getAvailableDxtradeAccounts();
             }
         );
 

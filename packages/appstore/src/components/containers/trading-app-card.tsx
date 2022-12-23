@@ -19,6 +19,8 @@ const TradingAppCard = ({
     onAction,
     sub_title,
     has_divider,
+    short_code,
+    region,
 }: Actions & BrandConfig & AvailableAccount & TDetailsOfEachMT5Loginid) => {
     const { client } = useStores();
 
@@ -34,9 +36,17 @@ const TradingAppCard = ({
                 <TradigPlatformIconProps icon={icon} size={48} />
             </div>
             <div className={classNames('trading-app-card__details', { 'trading-app-card--divider': has_divider })}>
-                <Text className='title' size='xs' line_height='s'>
-                    {sub_title}
-                </Text>
+                <div>
+                    <Text className='title' size='xs' line_height='s'>
+                        {sub_title}
+                    </Text>
+                    {short_code && (
+                        <span className='trading-app-card__details__short-code'>
+                            {short_code}
+                            {region}
+                        </span>
+                    )}
+                </div>
                 <Text className='title' size='xs' line_height='s' weight='bold'>
                     {name}
                 </Text>
