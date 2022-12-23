@@ -39,7 +39,14 @@ const TradingAppCard = ({
                         {sub_title}
                     </Text>
                     {short_code_and_region && (
-                        <span className='trading-app-card__details__short-code'>{short_code_and_region}</span>
+                        <Text
+                            weight='bolder'
+                            size='xxxs'
+                            line_height='s'
+                            className='trading-app-card__details__short-code'
+                        >
+                            {short_code_and_region}
+                        </Text>
                     )}
                 </div>
                 <Text className='title' size='xs' line_height='s' weight='bold'>

@@ -24,7 +24,7 @@ const CFDsListing = () => {
         has_any_real_account,
         startTrade,
         is_eu_user,
-        is_demo,
+        is_real,
         getExistingAccounts,
         getAccount,
     } = traders_hub;
@@ -37,13 +37,14 @@ const CFDsListing = () => {
 
     const getShortCodeAndRegion = (account: TDetailsOfEachMT5Loginid) => {
         let short_code_and_region;
-        if (!is_demo && !is_eu_user) {
+        if (is_real && !is_eu_user) {
             short_code_and_region =
                 account.landing_company_short &&
                 account.landing_company_short !== 'svg' &&
                 account.landing_company_short !== 'bvi'
                     ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
                     : account.landing_company_short?.toUpperCase();
+
             short_code_and_region =
                 account.market_type !== 'financial' && account.landing_company_short !== 'bvi'
                     ? `${short_code_and_region} - ${account?.server_info?.geolocation?.region}`
@@ -87,7 +88,7 @@ const CFDsListing = () => {
                 </div>
             )}
 
-            {!is_demo && has_no_real_account && (
+            {is_real && has_no_real_account && (
                 <div className='cfd-full-row'>
                     <AddOptionsAccount />
                 </div>
@@ -115,7 +116,7 @@ const CFDsListing = () => {
                                 short_code_and_region={getShortCodeAndRegion(existing_account)}
                                 platform={account.platform}
                                 description={existing_account.display_login}
-                                key={`trading_app_card_${account.name}`}
+                                key={`trading_app_card_${existing_account.display_login}`}
                                 type='transfer_trade'
                                 availability={selected_region}
                                 onAction={() => {
@@ -169,10 +170,9 @@ const CFDsListing = () => {
                                 )} ${existing_account.currency}`}
                                 description={existing_account.display_login}
                                 platform={account.platform}
-                                key={`trading_app_card_${account.name}`}
+                                key={`trading_app_card_${existing_account.display_login}`}
                                 type='transfer_trade'
                                 availability={selected_region}
-                                is_disabled={!is_demo ? !has_no_real_account : account.is_disabled}
                             />
                         ))
                     ) : (
@@ -181,7 +181,6 @@ const CFDsListing = () => {
                             name={account.name}
                             platform={account.platform}
                             description={account.description}
-                            is_disabled={account.is_disabled}
                             onAction={() => {
                                 getAccount(account.market_type, account.platform);
                             }}

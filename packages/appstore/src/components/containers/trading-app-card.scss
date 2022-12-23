@@ -12,13 +12,10 @@
         padding: 0 2rem 0 0;
         width: 100%;
         &__short-code {
-            font-weight: bolder;
-            font-size: 1rem;
             padding: 0.4rem;
             height: fit-content;
             width: fit-content;
             margin-left: 1rem;
-            line-height: 1.4;
             background-color: var(--icon-grey-background);
             border-radius: 4px;
         }
