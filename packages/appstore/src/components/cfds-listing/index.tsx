@@ -38,19 +38,21 @@ const CFDsListing = () => {
     const getShortCodeAndRegion = (account: TDetailsOfEachMT5Loginid) => {
         let short_code_and_region;
         if (is_real && !is_eu_user) {
-            short_code_and_region =
+            const short_code =
                 account.landing_company_short &&
                 account.landing_company_short !== 'svg' &&
                 account.landing_company_short !== 'bvi'
                     ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
                     : account.landing_company_short?.toUpperCase();
 
-            short_code_and_region =
+            const region =
                 account.market_type !== 'financial' && account.landing_company_short !== 'bvi'
-                    ? `${short_code_and_region} - ${account?.server_info?.geolocation?.region}`
-                    : short_code_and_region;
+                    ? ` - ${account?.server_info?.geolocation?.region}`
+                    : '';
+
+            short_code_and_region = `${short_code}${region}`;
         }
-        return short_code_and_region || '';
+        return short_code_and_region;
     };
 
     return (
