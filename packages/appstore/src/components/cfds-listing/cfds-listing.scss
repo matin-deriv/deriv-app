@@ -1120,6 +1120,10 @@
     &-row-eu {
         grid-template-columns: 1fr 1fr;
     }
+
+    &-row-demo{
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    }
     @for $column_count from 1 through 7 {
         .cfd-real-compare-accounts__row-with-columns-count-#{$column_count} {
             grid-template-columns: repeat($column_count, 1fr);

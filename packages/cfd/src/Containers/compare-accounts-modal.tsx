@@ -127,8 +127,8 @@ const CompareAccountsModal = ({
             type: 'gaming',
         });
 
-    const should_show_derivx = is_pre_appstore_setting && has_derivx;
-    const show_eu_related = (is_logged_in && is_eu) || (!is_logged_in && is_eu_country);
+    const should_show_derivx = false;
+    const show_eu_related = true;
     const is_dxtrade = platform && platform === CFD_PLATFORMS.DXTRADE;
     const mt5_accounts = [
         landing_companies?.mt_gaming_company?.financial,
@@ -145,13 +145,19 @@ const CompareAccountsModal = ({
 
     const getCFDModalTitle = () => {
         if (should_show_derivx) {
-            return localize('Compare CFDs real accounts');
+            return is_demo_tab ? localize('Compare CFDs demo accounts') : localize('Compare CFDs real accounts');
         }
         return is_dxtrade ? cfd_account_button_label : localize('Compare available accounts');
     };
 
     const getModalStyle = () => {
         if (should_show_derivx) {
+            if (is_demo_tab) {
+                return {
+                    height: '404px',
+                    width: '610px',
+                };
+            }
             return {
                 height: '574px',
                 width: '1131px',
@@ -225,6 +231,7 @@ const CompareAccountsModal = ({
                                     should_show_derivx={should_show_derivx}
                                     real_account_creation_unlock_date={real_account_creation_unlock_date}
                                     setShouldShowCooldownModal={setShouldShowCooldownModal}
+                                    is_eu={is_eu}
                                 />
                             )}
                         </Modal>

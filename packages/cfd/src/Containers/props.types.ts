@@ -260,3 +260,56 @@ export type TJurisdictionModalFootNoteProps = {
     jurisdiction_selected_shortcode: string;
     should_restrict_bvi_account_creation: boolean;
 };
+
+export type TCompareAccountRowItem = {
+    text: string | Array<string>;
+    tooltip_msg?: string;
+};
+
+export type TCompareAccountContentValues = Record<string, TCompareAccountRowItem | undefined>;
+
+export type TCompareAccountInstrumentsRowProps = {
+    attr: string;
+    val: TCompareAccountContentValues;
+};
+
+export type TCompareAccountContentProps = {
+    id: string;
+    attribute: string;
+    values: TCompareAccountContentValues;
+};
+
+export type TCompareAccountFooterButtonData = { label: string; action: string };
+
+export type TDMT5CompareModalContentProps = {
+    context: RootStore;
+    account_settings: GetSettings;
+    setAccountSettings: (get_settings_response: GetSettings) => void;
+    account_type: TOpenAccountTransferMeta;
+    setAccountType: (account_type: TOpenAccountTransferMeta) => void;
+    clearCFDError: () => void;
+    current_list: Record<string, DetailsOfEachMT5Loginid>;
+    has_real_account: boolean;
+    is_logged_in: boolean;
+    is_demo_tab: boolean;
+    is_real_enabled: boolean;
+    is_virtual: boolean;
+    openDerivRealAccountNeededModal: () => void;
+    openPasswordModal: (account_type: TOpenAccountTransferMeta) => void;
+    openSwitchToRealAccountModal: () => void;
+    toggleCompareAccounts: () => void;
+    toggleCFDVerificationModal: () => void;
+    trading_platform_available_accounts: TTradingPlatformAvailableAccount[];
+    toggleCFDPersonalDetailsModal: (is_from_mt5_compare_accounts?: boolean) => void;
+    setJurisdictionSelectedShortcode: (shortcode: string) => void;
+    show_eu_related: boolean;
+    account_status: GetAccountStatus;
+    upgradeable_landing_companies: unknown[];
+    setAppstorePlatform: (platform: string) => void;
+    should_show_derivx: boolean;
+    should_restrict_bvi_account_creation: boolean;
+    updateAccountStatus: () => void;
+    real_account_creation_unlock_date: string;
+    setShouldShowCooldownModal: (value: boolean) => void;
+    is_eu: boolean;
+};
