@@ -5,21 +5,21 @@ export const eu_real_content: TCompareAccountContentProps[] = [
     {
         id: 'jurisdiction',
         attribute: localize('Jurisdiction'),
-        content: {
+        values: {
             financial_maltainvest: { text: localize('Malta') },
         },
     },
     {
         id: 'counterparty',
         attribute: localize('Counterparty company'),
-        content: {
+        values: {
             financial_maltainvest: { text: localize('Deriv Investments (Europe) Limited') },
         },
     },
     {
         id: 'regulator',
         attribute: localize('Regulator'),
-        content: {
+        values: {
             financial_maltainvest: {
                 text: localize('Regulated by the Malta Financial Services Authority (MFSA) (licence no. IS/70156)'),
             },
@@ -28,14 +28,14 @@ export const eu_real_content: TCompareAccountContentProps[] = [
     {
         id: 'leverage',
         attribute: localize('Maximum leverage'),
-        content: {
+        values: {
             financial_maltainvest: { text: localize('Up to 1:30') },
         },
     },
     {
         id: 'instruments',
         attribute: localize('Trading instruments'),
-        content: {
+        values: {
             financial_maltainvest: {
                 text: [
                     localize('Forex'),
@@ -53,7 +53,7 @@ export const cr_real_content: TCompareAccountContentProps[] = [
     {
         id: 'platform',
         attribute: localize('Platform'),
-        content: {
+        values: {
             synthetic_svg: { text: localize('MT5') },
             derivx: { text: localize('Deriv X') },
         },
@@ -61,7 +61,7 @@ export const cr_real_content: TCompareAccountContentProps[] = [
     {
         id: 'jurisdiction',
         attribute: localize('Jurisdiction'),
-        content: {
+        values: {
             synthetic_svg: { text: localize('St. Vincent & Grenadines') },
             synthetic_bvi: { text: localize('British Virgin Islands') },
             financial_svg: { text: localize('St. Vincent & Grenadines') },
@@ -79,7 +79,7 @@ export const cr_real_content: TCompareAccountContentProps[] = [
     {
         id: 'counterparty',
         attribute: localize('Counterparty company'),
-        content: {
+        values: {
             synthetic_svg: { text: localize('Deriv (SVG) LLC') },
             synthetic_bvi: { text: localize('Deriv (BVI) Ltd') },
             financial_svg: { text: localize('Deriv (SVG) LLC') },
@@ -92,7 +92,7 @@ export const cr_real_content: TCompareAccountContentProps[] = [
     {
         id: 'regulator',
         attribute: localize('Regulator/External dispute resolution'),
-        content: {
+        values: {
             synthetic_svg: { text: localize('Financial Commission') },
             synthetic_bvi: {
                 text: localize('British Virgin Islands Financial Services Commission (licence no. SIBA/L/18/1114)'),
@@ -111,7 +111,7 @@ export const cr_real_content: TCompareAccountContentProps[] = [
     {
         id: 'leverage',
         attribute: localize('Maximum leverage'),
-        content: {
+        values: {
             synthetic_svg: { text: localize('Up to 1:1000') },
             synthetic_bvi: { text: localize('Up to 1:1000') },
             financial_vanuatu: { text: localize('Up to 1:1000') },
@@ -122,7 +122,7 @@ export const cr_real_content: TCompareAccountContentProps[] = [
     {
         id: 'instruments',
         attribute: localize('Trading instruments'),
-        content: {
+        values: {
             synthetic_svg: { text: [localize('Synthetics'), localize('Baskets'), localize('Derived FX')] },
             financial_svg: {
                 text: [
@@ -174,7 +174,7 @@ export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
     {
         id: 'platform',
         attribute: localize('Platform'),
-        content: {
+        values: {
             synthetic_svg: { text: localize('MT5') },
             financial_svg: { text: localize('MT5') },
             derivx: { text: localize('Deriv X') },
@@ -183,7 +183,7 @@ export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
     {
         id: 'leverage',
         attribute: localize('Maximum leverage'),
-        content: {
+        values: {
             synthetic_svg: { text: localize('Up to 1:1000') },
             financial_svg: { text: localize('Up to 1:1000') },
             derivx: { text: localize('Up to 1:1000') },
@@ -192,7 +192,7 @@ export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
     {
         id: 'instruments',
         attribute: localize('Trading instruments'),
-        content: {
+        values: {
             synthetic_svg: { text: [localize('Synthetics'), localize('Baskets'), localize('Derived FX')] },
             financial_svg: {
                 text: [

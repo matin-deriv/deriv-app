@@ -1,6 +1,6 @@
 import React from 'react';
 import classNames from 'classnames';
-import { Table, Div100vhContainer, Button, Text, Popover } from '@deriv/components';
+import { Table, Button, Text, Popover } from '@deriv/components';
 import { localize } from '@deriv/translations';
 import { isDesktop, WS, getAuthenticationStatusInfo, CFD_PLATFORMS } from '@deriv/shared';
 import { connect } from '../Stores/connect';
@@ -114,17 +114,16 @@ const DMT5CompareModalContent = ({
                 return modal_content;
             }
             const mt5_data = modal_content.map(item => {
-                const { derivx, ...rest } = item.content; // eslint-disable-line @typescript-eslint/no-unused-vars
+                const { derivx, ...rest } = item.values; // eslint-disable-line @typescript-eslint/no-unused-vars
                 return { ...item, values: rest };
             });
             return mt5_data;
         }
         return modal_content.map(row_data => {
-            const available_accounts_values = Object.entries(row_data.content).reduce(
+            const available_accounts_values = Object.entries(row_data.values).reduce(
                 (acc, [key, value]) => (available_accounts_keys.includes(key) ? { ...acc, [key]: value } : acc),
                 {} as TCompareAccountContentValues
             );
-
             const content_data = { ...row_data, values: {} as TCompareAccountContentValues };
             const col_num = should_show_derivx ? 7 : 6;
             if (available_accounts_keys.length < col_num && !show_eu_related) {
@@ -144,11 +143,11 @@ const DMT5CompareModalContent = ({
                 );
                 available_accounts_keys.forEach(key => {
                     if (row_data.id === 'leverage' && (key === 'financial_svg' || key === 'financial_bvi')) {
-                        content_data.values[key] = row_data.content.financial_vanuatu;
+                        content_data.values[key] = row_data.values.financial_vanuatu;
                     } else if (row_data.id === 'instruments' && key === 'synthetic_bvi') {
-                        content_data.values[key] = row_data.content.synthetic_svg;
+                        content_data.values[key] = row_data.values.synthetic_svg;
                     } else if (row_data.id === 'instruments' && key === 'financial_bvi') {
-                        content_data.values[key] = row_data.content.financial_svg;
+                        content_data.values[key] = row_data.values.financial_svg;
                     }
                 });
             }
@@ -338,7 +337,7 @@ const DMT5CompareModalContent = ({
         </Table.Row>
     );
 
-    const Row = ({ id, attribute, content }: TCompareAccountContentProps) => {
+    const Row = ({ id, attribute, values }: TCompareAccountContentProps) => {
         const is_leverage_row = id === 'leverage';
         const is_platform_row = id === 'platform';
 
@@ -346,7 +345,7 @@ const DMT5CompareModalContent = ({
             return null;
         }
         if (id === 'instruments') {
-            return <InstrumentsRow attr={attribute} val={content} />;
+            return <InstrumentsRow attr={attribute} val={values} />;
         }
         return (
             <Table.Row
@@ -366,11 +365,11 @@ const DMT5CompareModalContent = ({
                     </Text>
                 </Table.Cell>
 
-                {Object.keys(content).map(item => (
+                {Object.keys(values).map(item => (
                     <Table.Cell
                         key={item}
                         className={classNames('cfd-accounts-compare-modal__table-row-item', {
-                            'cfd-accounts-compare-modal__table-row-item--tooltip': content[item]?.tooltip_msg,
+                            'cfd-accounts-compare-modal__table-row-item--tooltip': values[item]?.tooltip_msg,
                         })}
                     >
                         <>
@@ -381,9 +380,9 @@ const DMT5CompareModalContent = ({
                                 color='prominent'
                                 size={getContentSize(id)}
                             >
-                                {content[item]?.text}
+                                {values[item]?.text}
                             </Text>
-                            {content[item]?.tooltip_msg && (
+                            {values[item]?.tooltip_msg && (
                                 <Popover
                                     alignment='left'
                                     className='cfd-compare-accounts-tooltip'
@@ -391,7 +390,7 @@ const DMT5CompareModalContent = ({
                                     icon='info'
                                     disable_message_icon
                                     is_bubble_hover_enabled
-                                    message={content[item]?.tooltip_msg}
+                                    message={values[item]?.tooltip_msg}
                                     zIndex={9999}
                                 />
                             )}
