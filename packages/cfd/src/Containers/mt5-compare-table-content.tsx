@@ -57,7 +57,6 @@ const DMT5CompareModalContent = ({
     const mt5_platforms = trading_platform_available_accounts.map(
         account => `${account.market_type === 'gaming' ? 'synthetic' : account.market_type}_${account.shortcode}`
     );
-    console.log(mt5_platforms);
 
     const has_synthetic = trading_platform_available_accounts.some(account => account.market_type === 'gaming');
     const available_accounts_keys = [...mt5_platforms, ...(should_show_derivx && has_synthetic ? ['derivx'] : [])];
@@ -121,13 +120,10 @@ const DMT5CompareModalContent = ({
             return mt5_data;
         }
         return modal_content.map(row_data => {
-            console.log(row_data, available_accounts_keys);
-
             const available_accounts_values = Object.entries(row_data.values).reduce(
                 (acc, [key, value]) => (available_accounts_keys.includes(key) ? { ...acc, [key]: value } : acc),
                 {} as TCompareAccountContentValues
             );
-            console.log(available_accounts_values);
 
             const content_data = { ...row_data, values: {} as TCompareAccountContentValues };
             const col_num = should_show_derivx ? 7 : 6;
@@ -345,7 +341,6 @@ const DMT5CompareModalContent = ({
     const Row = ({ id, attribute, values }: TCompareAccountContentProps) => {
         const is_leverage_row = id === 'leverage';
         const is_platform_row = id === 'platform';
-        console.log(values);
 
         if (is_platform_row && !should_show_derivx) {
             return null;

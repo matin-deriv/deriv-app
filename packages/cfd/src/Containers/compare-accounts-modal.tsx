@@ -127,8 +127,8 @@ const CompareAccountsModal = ({
             type: 'gaming',
         });
 
-    const should_show_derivx = false;
-    const show_eu_related = true;
+    const should_show_derivx = is_pre_appstore_setting && has_derivx;
+    const show_eu_related = (is_logged_in && is_eu) || (!is_logged_in && is_eu_country);
     const is_dxtrade = platform && platform === CFD_PLATFORMS.DXTRADE;
     const mt5_accounts = [
         landing_companies?.mt_gaming_company?.financial,
