@@ -1125,6 +1125,7 @@
         grid-template-columns: 1.5fr 1fr 1fr 1fr;
         @include mobile {
             width: 116vw;
+            height: unset;
         }
     }
 
