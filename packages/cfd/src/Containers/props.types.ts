@@ -276,7 +276,7 @@ export type TCompareAccountInstrumentsRowProps = {
 export type TCompareAccountContentProps = {
     id: string;
     attribute: string;
-    values: TCompareAccountContentValues;
+    content: TCompareAccountContentValues;
 };
 
 export type TCompareAccountFooterButtonData = { label: string; action: string };

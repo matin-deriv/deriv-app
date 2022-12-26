@@ -195,7 +195,7 @@ const CompareAccountsModal = ({
                 <React.Suspense fallback={<UILoader />}>
                     <DesktopWrapper>
                         <Modal
-                            className={is_dxtrade ? 'cfd-dashboard__compare-accounts' : 'cfd-real-compare-accounts'}
+                            className={is_dxtrade ? 'cfd-dashboard__compare-accounts' : 'cfd-accounts-compare-modal'}
                             disableApp={disableApp}
                             enableApp={enableApp}
                             is_open={is_compare_accounts_visible}
@@ -243,7 +243,8 @@ const CompareAccountsModal = ({
                             wrapper_classname='cfd-dashboard__compare-accounts'
                             visible={is_compare_accounts_visible}
                             onClose={toggleCompareAccounts}
-                            header_classname={is_dxtrade ? '' : 'cfd-real-compare-accounts-mobile-header'}
+                            header_classname={is_dxtrade ? '' : 'cfd-accounts-compare-modal-mobile-header'}
+                            has_full_height
                         >
                             {is_dxtrade && !should_show_derivx ? (
                                 <DxtradeCompareAccountContent
