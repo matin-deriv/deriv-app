@@ -10,6 +10,7 @@ import { isMobile, formatMoney } from '@deriv/shared';
 import TradingAppCard from 'Components/containers/trading-app-card';
 import { AvailableAccount, TDetailsOfEachMT5Loginid } from 'Types';
 import PlatformLoader from 'Components/pre-loader/platform-loader';
+import GetMoreAccounts from 'Components/get-more-accounts';
 
 const CFDsListing = () => {
     const {
@@ -27,6 +28,8 @@ const CFDsListing = () => {
         is_real,
         getExistingAccounts,
         getAccount,
+        toggleAccountTypeModalVisibility,
+        can_get_more_cfd_mt5_accounts,
     } = traders_hub;
 
     const { toggleCompareAccountsModal } = cfd;
@@ -102,45 +105,55 @@ const CFDsListing = () => {
                 </Text>
             </div>
             {is_landing_company_loaded ? (
-                available_mt5_accounts?.map((account: AvailableAccount) => {
-                    const existing_accounts = getExistingAccounts(account.platform, account.market_type);
-                    const has_existing_accounts = existing_accounts.length > 0;
-                    return has_existing_accounts ? (
-                        existing_accounts.map((existing_account: TDetailsOfEachMT5Loginid) => (
+                <>
+                    {available_mt5_accounts?.map((account: AvailableAccount) => {
+                        const existing_accounts = getExistingAccounts(account.platform, account.market_type);
+                        const has_existing_accounts = existing_accounts.length > 0;
+                        return has_existing_accounts ? (
+                            existing_accounts.map((existing_account: TDetailsOfEachMT5Loginid) => (
+                                <TradingAppCard
+                                    icon={account.icon}
+                                    sub_title={account.name}
+                                    name={`${formatMoney(
+                                        existing_account.currency,
+                                        existing_account.display_balance,
+                                        true
+                                    )} ${existing_account.currency}`}
+                                    short_code_and_region={getShortCodeAndRegion(existing_account)}
+                                    platform={account.platform}
+                                    description={existing_account.display_login}
+                                    key={`trading_app_card_${existing_account.display_login}`}
+                                    type='transfer_trade'
+                                    availability={selected_region}
+                                    onAction={() => {
+                                        startTrade(account.platform, existing_account);
+                                    }}
+                                />
+                            ))
+                        ) : (
                             <TradingAppCard
                                 icon={account.icon}
-                                sub_title={account.name}
-                                name={`${formatMoney(
-                                    existing_account.currency,
-                                    existing_account.display_balance,
-                                    true
-                                )} ${existing_account.currency}`}
-                                short_code_and_region={getShortCodeAndRegion(existing_account)}
+                                name={account.name}
                                 platform={account.platform}
-                                description={existing_account.display_login}
-                                key={`trading_app_card_${existing_account.display_login}`}
-                                type='transfer_trade'
+                                description={account.description}
+                                key={`trading_app_card_${account.name}`}
+                                type='get'
                                 availability={selected_region}
                                 onAction={() => {
-                                    startTrade(account.platform, existing_account);
+                                    getAccount(account.market_type, account.platform);
                                 }}
                             />
-                        ))
-                    ) : (
-                        <TradingAppCard
-                            icon={account.icon}
-                            name={account.name}
-                            platform={account.platform}
-                            description={account.description}
-                            key={`trading_app_card_${account.name}`}
-                            type='get'
-                            availability={selected_region}
-                            onAction={() => {
-                                getAccount(account.market_type, account.platform);
-                            }}
+                        );
+                    })}
+                    {can_get_more_cfd_mt5_accounts && (
+                        <GetMoreAccounts
+                            onClick={toggleAccountTypeModalVisibility}
+                            icon='IcAppstoreGetMoreAccounts'
+                            title={localize('Get more')}
+                            description={localize('Get more Deriv MT5 account with different type and jurisdiction.')}
                         />
-                    );
-                })
+                    )}
+                </>
             ) : (
                 <PlatformLoader />
             )}
