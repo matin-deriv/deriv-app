@@ -3,12 +3,12 @@ import { Link, useHistory } from 'react-router-dom';
 import { Dialog } from '@deriv/components';
 import { localize, Localize } from '@deriv/translations';
 import { routes } from '@deriv/shared';
+import { TError, TReactElement } from '../../types';
 import { useStore, observer } from '@deriv/stores';
-import { TError, TReactElement } from 'Types';
 
 type TErrorDialogProps = {
-    className: string;
-    error: TError | Record<string, never>;
+    className?: string;
+    error?: TError | Record<string, never>;
 };
 
 type TSetDetails = {

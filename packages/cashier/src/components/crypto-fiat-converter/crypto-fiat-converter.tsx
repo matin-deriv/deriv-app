@@ -3,8 +3,8 @@ import { Field, FieldProps, useFormikContext } from 'formik';
 import { DesktopWrapper, Input, Icon, MobileWrapper, Text, useInterval } from '@deriv/components';
 import { getCurrencyDisplayCode } from '@deriv/shared';
 import { localize, Localize } from '@deriv/translations';
+import { TReactChangeEvent, TReactChildren } from '../../types';
 import { useStore, observer } from '@deriv/stores';
-import { TReactChangeEvent, TReactChildren } from 'Types';
 import './crypto-fiat-converter.scss';
 
 type TTimerProps = {

@@ -1,10 +1,11 @@
 import classNames from 'classnames';
 import React from 'react';
-import { withRouter, useHistory } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
+import { observer } from 'mobx-react-lite';
 import { Text } from '@deriv/components';
 import { isMobile, routes } from '@deriv/shared';
 import { Localize } from '@deriv/translations';
-import { useStore, observer } from '@deriv/stores';
+import { useStore } from '@deriv/stores';
 import './virtual.scss';
 
 const Virtual = observer(() => {
@@ -62,4 +63,4 @@ const Virtual = observer(() => {
     );
 });
 
-export default withRouter(Virtual);
+export default Virtual;
