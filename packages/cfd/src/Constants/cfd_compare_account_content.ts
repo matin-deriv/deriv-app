@@ -6,7 +6,7 @@ export const eu_real_content: TCompareAccountContentProps[] = [
         id: 'jurisdiction',
         attribute: localize('Jurisdiction'),
         values: {
-            financial_maltainvest: { text: localize('Malta') },
+            financial_maltainvest: { text: localize('Malta'), options: { weight: 'bold' } },
         },
     },
     {
@@ -36,16 +36,18 @@ export const eu_real_content: TCompareAccountContentProps[] = [
         id: 'instruments',
         attribute: localize('Trading instruments'),
         values: {
-            financial_maltainvest: {
-                text: [
-                    localize('Forex'),
-                    localize('Stocks'),
-                    localize('Commodities'),
-                    localize('Stock indices'),
-                    localize('Synthetic indices'),
-                    localize('Cryptocurrencies'),
-                ],
-            },
+            financial_maltainvest: [
+                { text: localize('Synthetics'), options: { should_show_asterick_at_end: true } },
+                { text: localize('Forex: standard') },
+                { text: localize('Stock') },
+                { text: localize('Stock indices') },
+                { text: localize('Commodities') },
+                { text: localize('Cryptocurrencies') },
+                {
+                    text: localize('*Boom 300 and Crash 300 Index'),
+                    options: { color: 'loss-danger', weight: 'bold' },
+                },
+            ],
         },
     },
 ];
@@ -62,13 +64,14 @@ export const cr_real_content: TCompareAccountContentProps[] = [
         id: 'jurisdiction',
         attribute: localize('Jurisdiction'),
         values: {
-            synthetic_svg: { text: localize('St. Vincent & Grenadines') },
-            synthetic_bvi: { text: localize('British Virgin Islands') },
-            financial_svg: { text: localize('St. Vincent & Grenadines') },
-            financial_bvi: { text: localize('British Virgin Islands') },
-            financial_vanuatu: { text: localize('Vanuatu') },
+            synthetic_svg: { text: localize('St. Vincent & Grenadines'), options: { weight: 'bold' } },
+            synthetic_bvi: { text: localize('British Virgin Islands'), options: { weight: 'bold' } },
+            financial_svg: { text: localize('St. Vincent & Grenadines'), options: { weight: 'bold' } },
+            financial_bvi: { text: localize('British Virgin Islands'), options: { weight: 'bold' } },
+            financial_vanuatu: { text: localize('Vanuatu'), options: { weight: 'bold' } },
             financial_labuan: {
                 text: localize('Labuan'),
+                options: { weight: 'bold' },
                 tooltip_msg: localize(
                     'Choosing this jurisdiction will give you a Financial STP account. Your trades will go directly to the market and have tighter spreads.'
                 ),
@@ -123,36 +126,34 @@ export const cr_real_content: TCompareAccountContentProps[] = [
         id: 'instruments',
         attribute: localize('Trading instruments'),
         values: {
-            synthetic_svg: { text: [localize('Synthetics'), localize('Baskets'), localize('Derived FX')] },
-            financial_svg: {
-                text: [
-                    localize('Forex: standard/micro'),
-                    localize('Stocks'),
-                    localize('Stock indices'),
-                    localize('Commodities'),
-                    localize('Cryptocurrencies'),
-                ],
-            },
-            financial_vanuatu: {
-                text: [
-                    localize('Forex'),
-                    localize('Stock indices'),
-                    localize('Commodities'),
-                    localize('Cryptocurrencies'),
-                ],
-            },
-            financial_labuan: { text: [localize('Forex'), localize('Cryptocurrencies')] },
-            derivx: {
-                text: [
-                    localize('Synthetics'),
-                    localize('Baskets'),
-                    localize('Forex: standard/micro'),
-                    localize('Stocks'),
-                    localize('Stock indices'),
-                    localize('Commodities'),
-                    localize('Cryptocurrencies'),
-                ],
-            },
+            synthetic_svg: [
+                { text: localize('Synthetics') },
+                { text: localize('Baskets') },
+                { text: localize('Derived FX') },
+            ],
+            financial_svg: [
+                { text: localize('Forex: standard/micro') },
+                { text: localize('Stocks') },
+                { text: localize('Stock indices') },
+                { text: localize('Commodities') },
+                { text: localize('Cryptocurrencies') },
+            ],
+            financial_vanuatu: [
+                { text: localize('Forex') },
+                { text: localize('Stock indices') },
+                { text: localize('Commodities') },
+                { text: localize('Cryptocurrencies') },
+            ],
+            financial_labuan: [{ text: localize('Forex') }, { text: localize('Cryptocurrencies') }],
+            derivx: [
+                { text: localize('Synthetics') },
+                { text: localize('Baskets') },
+                { text: localize('Forex: standard/micro') },
+                { text: localize('Stocks') },
+                { text: localize('Stock indices') },
+                { text: localize('Commodities') },
+                { text: localize('Cryptocurrencies') },
+            ],
         },
     },
 ];
@@ -193,28 +194,28 @@ export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
         id: 'instruments',
         attribute: localize('Trading instruments'),
         values: {
-            synthetic_svg: { text: [localize('Synthetics'), localize('Baskets'), localize('Derived FX')] },
-            financial_svg: {
-                text: [
-                    localize('Forex: standard/micro'),
-                    localize('Stocks'),
-                    localize('Stock indices'),
-                    localize('Commodities'),
-                    localize('Cryptocurrencies'),
-                ],
-            },
-            derivx: {
-                text: [
-                    localize('Synthetics'),
-                    localize('Baskets'),
-                    localize('Derived FX'),
-                    localize('Forex: standard/micro'),
-                    localize('Stocks'),
-                    localize('Stock indices'),
-                    localize('Commodities'),
-                    localize('Cryptocurrencies'),
-                ],
-            },
+            synthetic_svg: [
+                { text: localize('Synthetics') },
+                { text: localize('Baskets') },
+                { text: localize('Derived FX') },
+            ],
+            financial_svg: [
+                { text: localize('Forex: standard/micro') },
+                { text: localize('Stocks') },
+                { text: localize('Stock indices') },
+                { text: localize('Commodities') },
+                { text: localize('Cryptocurrencies') },
+            ],
+            derivx: [
+                { text: localize('Synthetics') },
+                { text: localize('Baskets') },
+                { text: localize('Derived FX') },
+                { text: localize('Forex: standard/micro') },
+                { text: localize('Stocks') },
+                { text: localize('Stock indices') },
+                { text: localize('Commodities') },
+                { text: localize('Cryptocurrencies') },
+            ],
         },
     },
 ];

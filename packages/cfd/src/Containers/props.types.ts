@@ -262,11 +262,15 @@ export type TJurisdictionModalFootNoteProps = {
 };
 
 export type TCompareAccountRowItem = {
-    text: string | Array<string>;
+    text: string;
     tooltip_msg?: string;
+    options?: Record<string, string | boolean>;
 };
 
-export type TCompareAccountContentValues = Record<string, TCompareAccountRowItem | undefined>;
+export type TCompareAccountContentValues = Record<
+    string,
+    TCompareAccountRowItem | TCompareAccountRowItem[] | undefined
+>;
 
 export type TCompareAccountInstrumentsRowProps = {
     attr: string;

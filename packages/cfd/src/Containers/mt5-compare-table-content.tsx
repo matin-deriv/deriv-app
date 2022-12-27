@@ -11,6 +11,7 @@ import {
     TCompareAccountFooterButtonData,
     TCompareAccountContentValues,
     TCompareAccountInstrumentsRowProps,
+    TCompareAccountRowItem,
 } from './props.types';
 import {
     eu_real_content,
@@ -321,15 +322,27 @@ const DMT5CompareModalContent = ({
 
             {Object.keys(val).map(rowKey => (
                 <Table.Cell key={rowKey} className='cfd-accounts-compare-modal__table-row-item'>
-                    {Array.isArray(val[rowKey]?.text) ? (
-                        (val[rowKey]?.text as []).map((item, index) => (
-                            <Text key={index} as='p' weight=' normal' align='center' color='prominent' size='xxxs'>
-                                {item}
+                    {Array.isArray(val[rowKey]) ? (
+                        (val[rowKey] as TCompareAccountRowItem[])?.map((item, index) => (
+                            <Text
+                                key={index}
+                                as='p'
+                                color={item?.options?.color ?? 'prominent'}
+                                weight={item?.options?.weight ?? 'normal'}
+                                align={item?.options?.align ?? 'center'}
+                                size='xxxs'
+                            >
+                                {item.text}
+                                {item?.options?.should_show_asterick_at_end && (
+                                    <Text color={'loss-danger'} size={'xxxs'}>
+                                        *
+                                    </Text>
+                                )}
                             </Text>
                         ))
                     ) : (
                         <Text as='p' weight='normal' align='center' color='prominent' size='xxxs'>
-                            {val[rowKey]?.text}
+                            {(val[rowKey] as TCompareAccountRowItem)?.text}
                         </Text>
                     )}
                 </Table.Cell>
@@ -340,12 +353,9 @@ const DMT5CompareModalContent = ({
     const Row = ({ id, attribute, values }: TCompareAccountContentProps) => {
         const is_leverage_row = id === 'leverage';
         const is_platform_row = id === 'platform';
-
+        const is_instruments_row = id === 'instruments';
         if (is_platform_row && !should_show_derivx) {
             return null;
-        }
-        if (id === 'instruments') {
-            return <InstrumentsRow attr={attribute} val={values} />;
         }
         return (
             <Table.Row
@@ -356,6 +366,7 @@ const DMT5CompareModalContent = ({
                         [`cfd-accounts-compare-modal__row-with-columns-count-${available_accounts_count + 1}`]:
                             available_accounts_count < 6,
                         [`cfd-accounts-compare-modal__table-row--platform${pre_appstore_class}`]: is_platform_row,
+                        [`cfd-accounts-compare-modal__table-row--instruments${pre_appstore_class}`]: is_instruments_row,
                     })
                 }
             >
@@ -365,34 +376,60 @@ const DMT5CompareModalContent = ({
                     </Text>
                 </Table.Cell>
 
-                {Object.keys(values).map(item => (
+                {Object.keys(values).map(rowKey => (
                     <Table.Cell
-                        key={item}
+                        key={rowKey}
                         className={classNames('cfd-accounts-compare-modal__table-row-item', {
-                            'cfd-accounts-compare-modal__table-row-item--tooltip': values[item]?.tooltip_msg,
+                            'cfd-accounts-compare-modal__table-row-item--tooltip': (
+                                values[rowKey] as TCompareAccountRowItem
+                            )?.tooltip_msg,
                         })}
                     >
                         <>
-                            <Text
-                                as='p'
-                                weight={id === 'jurisdiction' ? 'bold' : 'normal'}
-                                align='center'
-                                color='prominent'
-                                size={getContentSize(id)}
-                            >
-                                {values[item]?.text}
-                            </Text>
-                            {values[item]?.tooltip_msg && (
-                                <Popover
-                                    alignment='left'
-                                    className='cfd-compare-accounts-tooltip'
-                                    classNameBubble='cfd-compare-accounts-tooltip--msg'
-                                    icon='info'
-                                    disable_message_icon
-                                    is_bubble_hover_enabled
-                                    message={values[item]?.tooltip_msg}
-                                    zIndex={9999}
-                                />
+                            {Array.isArray(values[rowKey]) ? (
+                                (values[rowKey] as TCompareAccountRowItem[])?.map((item, index) => (
+                                    <Text
+                                        key={index}
+                                        as='p'
+                                        color={item?.options?.color ?? 'prominent'}
+                                        weight={item?.options?.weight ?? 'normal'}
+                                        align={item?.options?.align ?? 'center'}
+                                        size={getContentSize(id)}
+                                    >
+                                        {item.text}
+                                        {item?.options?.should_show_asterick_at_end && (
+                                            <Text color={'loss-danger'} size={'xxxs'}>
+                                                *
+                                            </Text>
+                                        )}
+                                    </Text>
+                                ))
+                            ) : (
+                                <>
+                                    <Text
+                                        as='p'
+                                        weight={(values[rowKey] as TCompareAccountRowItem)?.options?.weight ?? 'normal'}
+                                        align={(values[rowKey] as TCompareAccountRowItem)?.options?.align ?? 'center'}
+                                        color={
+                                            (values[rowKey] as TCompareAccountRowItem)?.options?.color ?? 'prominent'
+                                        }
+                                        size={getContentSize(id)}
+                                    >
+                                        {(values[rowKey] as TCompareAccountRowItem)?.text}
+                                    </Text>
+                                    {(values[rowKey] as TCompareAccountRowItem)?.tooltip_msg && (
+                                        <Popover
+                                            alignment='left'
+                                            className='cfd-compare-accounts-tooltip'
+                                            classNameBubble='cfd-compare-accounts-tooltip--msg'
+                                            icon='info'
+                                            disable_message_icon
+                                            is_bubble_hover_enabled
+                                            message={(values[rowKey] as TCompareAccountRowItem)?.tooltip_msg}
+                                            zIndex={9999}
+                                        />
+                                    )}
+                                </>
                             )}
                         </>
                     </Table.Cell>
