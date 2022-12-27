@@ -18,6 +18,7 @@ const CFDsListing = () => {
         modules: { cfd },
         traders_hub,
         common,
+        ui,
     } = useStores();
     const {
         available_dxtrade_accounts,
@@ -143,12 +144,16 @@ const CFDsListing = () => {
                                 type='get'
                                 availability={selected_region}
                                 onAction={() => {
-                                    setAccountType({
-                                        category: selected_account_type,
-                                        type: account.market_type,
-                                    });
-                                    setAppstorePlatform(account.platform);
-                                    getAccount();
+                                    if (has_no_real_account && is_real) {
+                                        ui.openDerivRealAccountNeededModal();
+                                    } else {
+                                        setAccountType({
+                                            category: selected_account_type,
+                                            type: account.market_type,
+                                        });
+                                        setAppstorePlatform(account.platform);
+                                        getAccount();
+                                    }
                                 }}
                             />
                         );
@@ -208,12 +213,16 @@ const CFDsListing = () => {
                             platform={account.platform}
                             description={account.description}
                             onAction={() => {
-                                setAccountType({
-                                    category: selected_account_type,
-                                    type: account.market_type,
-                                });
-                                setAppstorePlatform(account.platform);
-                                getAccount();
+                                if (has_no_real_account && is_real) {
+                                    ui.openDerivRealAccountNeededModal();
+                                } else {
+                                    setAccountType({
+                                        category: selected_account_type,
+                                        type: account.market_type,
+                                    });
+                                    setAppstorePlatform(account.platform);
+                                    getAccount();
+                                }
                             }}
                             key={`trading_app_card_${account.name}`}
                             type='get'
