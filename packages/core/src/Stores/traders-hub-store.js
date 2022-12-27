@@ -286,9 +286,8 @@ export default class TradersHubStore extends BaseStore {
         }
     }
 
-    openDemoCFDAccount(account_type, platform) {
-        const { client, common, modules } = this.root_store;
-        const { setAppstorePlatform } = common;
+    openDemoCFDAccount(account_type) {
+        const { client, modules } = this.root_store;
         const {
             standpoint,
             createCFDAccount,
@@ -297,37 +296,22 @@ export default class TradersHubStore extends BaseStore {
             has_maltainvest_account,
         } = modules.cfd;
         const { is_eu } = client;
-
-        setAppstorePlatform(platform);
         if (is_eu && !has_maltainvest_account && standpoint?.iom) {
             openAccountNeededModal('maltainvest', localize('Deriv Multipliers'), localize('demo CFDs'));
             return;
         }
-        createCFDAccount({
-            category: 'demo',
-            type: account_type,
-            platform,
-        });
+        createCFDAccount(account_type);
         enableCFDPasswordModal();
     }
 
     openRealAccount(account_type, platform) {
-        const { client, modules, common } = this.root_store;
+        const { client, modules } = this.root_store;
         const { has_active_real_account } = client;
-        const { setAccountType, createCFDAccount, enableCFDPasswordModal, toggleJurisdictionModal } = modules.cfd;
-        const { setAppstorePlatform } = common;
-        setAppstorePlatform(platform);
-        setAccountType({
-            category: 'real',
-            type: account_type,
-        });
+        const { createCFDAccount, enableCFDPasswordModal, toggleJurisdictionModal } = modules.cfd;
         if (has_active_real_account && platform === CFD_PLATFORMS.MT5) {
             toggleJurisdictionModal();
         } else {
-            createCFDAccount({
-                category: 'real',
-                type: account_type,
-            });
+            createCFDAccount(account_type);
             enableCFDPasswordModal();
         }
     }
@@ -353,7 +337,10 @@ export default class TradersHubStore extends BaseStore {
         }
     }
 
-    getAccount(account_type, platform) {
+    getAccount() {
+        const { modules, common } = this.root_store;
+        const { account_type } = modules.cfd;
+        const { platform } = common;
         if (this.is_demo) {
             this.openDemoCFDAccount(account_type, platform);
         } else {

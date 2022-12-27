@@ -17,6 +17,7 @@ const CFDsListing = () => {
         client,
         modules: { cfd },
         traders_hub,
+        common,
     } = useStores();
     const {
         available_dxtrade_accounts,
@@ -30,10 +31,12 @@ const CFDsListing = () => {
         getAccount,
         toggleAccountTypeModalVisibility,
         can_get_more_cfd_mt5_accounts,
+        selected_account_type,
     } = traders_hub;
 
-    const { toggleCompareAccountsModal } = cfd;
+    const { toggleCompareAccountsModal, setAccountType } = cfd;
     const { is_eu, is_landing_company_loaded } = client;
+    const { setAppstorePlatform } = common;
     const has_no_real_account = !has_any_real_account;
 
     const accounts_sub_text = is_eu ? localize('Account Information') : localize('Compare accounts');
@@ -140,7 +143,12 @@ const CFDsListing = () => {
                                 type='get'
                                 availability={selected_region}
                                 onAction={() => {
-                                    getAccount(account.market_type, account.platform);
+                                    setAccountType({
+                                        category: selected_account_type,
+                                        type: account.market_type,
+                                    });
+                                    setAppstorePlatform(account.platform);
+                                    getAccount();
                                 }}
                             />
                         );
@@ -200,7 +208,12 @@ const CFDsListing = () => {
                             platform={account.platform}
                             description={account.description}
                             onAction={() => {
-                                getAccount(account.market_type, account.platform);
+                                setAccountType({
+                                    category: selected_account_type,
+                                    type: account.market_type,
+                                });
+                                setAppstorePlatform(account.platform);
+                                getAccount();
                             }}
                             key={`trading_app_card_${account.name}`}
                             type='get'
