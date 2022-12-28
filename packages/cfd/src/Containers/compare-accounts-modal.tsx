@@ -129,6 +129,7 @@ const CompareAccountsModal = ({
 
     const should_show_derivx = is_pre_appstore_setting && has_derivx;
     const show_eu_related = (is_logged_in && is_eu) || (!is_logged_in && is_eu_country);
+    const is_preppstore_demo_eu_client = is_pre_appstore_setting && show_eu_related && is_demo_tab;
     const is_dxtrade = platform && platform === CFD_PLATFORMS.DXTRADE;
     const mt5_accounts = [
         landing_companies?.mt_gaming_company?.financial,
@@ -146,6 +147,8 @@ const CompareAccountsModal = ({
     const getCFDModalTitle = () => {
         if (should_show_derivx) {
             return is_demo_tab ? localize('Compare CFDs demo accounts') : localize('Compare CFDs real accounts');
+        } else if (is_pre_appstore_setting && show_eu_related) {
+            return is_demo_tab ? localize('Deriv MT5 CFDs demo account') : localize('Deriv MT5 CFDs real account');
         }
         return is_dxtrade ? cfd_account_button_label : localize('Compare available accounts');
     };
@@ -168,6 +171,12 @@ const CompareAccountsModal = ({
                 width: '903px',
             };
         } else if (show_eu_related) {
+            if (is_preppstore_demo_eu_client) {
+                return {
+                    height: '350px',
+                    width: '483px',
+                };
+            }
             return {
                 height: '506px',
                 width: '300px',
@@ -232,6 +241,7 @@ const CompareAccountsModal = ({
                                     real_account_creation_unlock_date={real_account_creation_unlock_date}
                                     setShouldShowCooldownModal={setShouldShowCooldownModal}
                                     is_eu={is_eu}
+                                    is_preppstore_demo_eu_client={is_preppstore_demo_eu_client}
                                 />
                             )}
                         </Modal>

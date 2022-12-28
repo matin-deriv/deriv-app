@@ -76,7 +76,7 @@ export const cr_real_content: TCompareAccountContentProps[] = [
                     'Choosing this jurisdiction will give you a Financial STP account. Your trades will go directly to the market and have tighter spreads.'
                 ),
             },
-            derivx: { text: localize('St. Vincent & Grenadines') },
+            derivx: { text: localize('St. Vincent & Grenadines'), options: { weight: 'bold' } },
         },
     },
     {
@@ -224,4 +224,32 @@ export const preappstore_demo_cr_footer_buttons: TCompareAccountFooterButtonData
     { label: localize('Add'), action: 'synthetic_svg' },
     { label: localize('Add'), action: 'financial_svg' },
     { label: localize('Add'), action: 'derivx' },
+];
+
+export const preppstore_demo_eu_content: TCompareAccountContentProps[] = [
+    {
+        id: 'leverage',
+        attribute: localize('Maximum leverage'),
+        values: {
+            financial_maltainvest: { text: localize('Up to 1:30') },
+        },
+    },
+    {
+        id: 'instruments',
+        attribute: localize('Trading instruments'),
+        values: {
+            financial_maltainvest: [
+                { text: localize('Synthetics'), options: { should_show_asterick_at_end: true } },
+                { text: localize('Forex: standard') },
+                { text: localize('Stocks') },
+                { text: localize('Stock indices') },
+                { text: localize('Commodities') },
+                { text: localize('Cryptocurrencies') },
+                {
+                    text: localize('*Boom 300 and Crash 300 Index'),
+                    options: { color: 'loss-danger', weight: 'bold', line_height: '22.4rem' },
+                },
+            ],
+        },
+    },
 ];

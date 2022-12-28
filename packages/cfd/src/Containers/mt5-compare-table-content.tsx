@@ -20,6 +20,7 @@ import {
     eu__real_footer_button,
     preappstore_demo_cr_content,
     preappstore_demo_cr_footer_buttons,
+    preppstore_demo_eu_content,
 } from '../Constants/cfd_compare_account_content';
 import { GetSettings, GetAccountSettingsResponse } from '@deriv/api-types';
 
@@ -52,6 +53,7 @@ const DMT5CompareModalContent = ({
     real_account_creation_unlock_date,
     setShouldShowCooldownModal,
     is_eu,
+    is_preppstore_demo_eu_client,
 }: TDMT5CompareModalContentProps) => {
     const [has_submitted_personal_details, setHasSubmittedPersonalDetails] = React.useState(false);
 
@@ -264,9 +266,13 @@ const DMT5CompareModalContent = ({
     const getModalContent = () => {
         if (is_preappstore_demo_cr_account) {
             return preappstore_demo_cr_content;
+        } else if (is_preppstore_demo_eu_client) {
+            return preppstore_demo_eu_content;
         }
         return show_eu_related ? eu_real_content : cr_real_content;
     };
+
+    console.log(getModalContent());
 
     const modal_footer = () => {
         if (is_preappstore_demo_cr_account) return preappstore_demo_cr_footer_buttons;
@@ -303,52 +309,6 @@ const DMT5CompareModalContent = ({
         else if (show_eu_related) return 'cfd-accounts-compare-modal-row-eu';
         return null;
     };
-
-    const InstrumentsRow = ({ attr, val }: TCompareAccountInstrumentsRowProps) => (
-        <Table.Row
-            className={
-                getClassNamesForDemoAndEu() ??
-                classNames(`cfd-accounts-compare-modal__table-row--instruments${pre_appstore_class}`, {
-                    [`cfd-accounts-compare-modal__row-with-columns-count-${available_accounts_count + 1}`]:
-                        available_accounts_count < 6,
-                })
-            }
-        >
-            <Table.Cell fixed>
-                <Text as='p' weight='bold' align='center' color='prominent' size='xxs'>
-                    {attr}
-                </Text>
-            </Table.Cell>
-
-            {Object.keys(val).map(rowKey => (
-                <Table.Cell key={rowKey} className='cfd-accounts-compare-modal__table-row-item'>
-                    {Array.isArray(val[rowKey]) ? (
-                        (val[rowKey] as TCompareAccountRowItem[])?.map((item, index) => (
-                            <Text
-                                key={index}
-                                as='p'
-                                color={item?.options?.color ?? 'prominent'}
-                                weight={item?.options?.weight ?? 'normal'}
-                                align={item?.options?.align ?? 'center'}
-                                size='xxxs'
-                            >
-                                {item.text}
-                                {item?.options?.should_show_asterick_at_end && (
-                                    <Text color={'loss-danger'} size={'xxxs'}>
-                                        *
-                                    </Text>
-                                )}
-                            </Text>
-                        ))
-                    ) : (
-                        <Text as='p' weight='normal' align='center' color='prominent' size='xxxs'>
-                            {(val[rowKey] as TCompareAccountRowItem)?.text}
-                        </Text>
-                    )}
-                </Table.Cell>
-            ))}
-        </Table.Row>
-    );
 
     const Row = ({ id, attribute, values }: TCompareAccountContentProps) => {
         const is_leverage_row = id === 'leverage';
@@ -395,7 +355,9 @@ const DMT5CompareModalContent = ({
                                         weight={item?.options?.weight ?? 'normal'}
                                         align={item?.options?.align ?? 'center'}
                                         size={getContentSize(id)}
+                                        line_height={item?.options?.line_height ?? 'm'}
                                     >
+                                        {console.log(item?.options?.line_height)}
                                         {item.text}
                                         {item?.options?.should_show_asterick_at_end && (
                                             <Text color={'loss-danger'} size={'xxxs'}>
@@ -414,6 +376,9 @@ const DMT5CompareModalContent = ({
                                             (values[rowKey] as TCompareAccountRowItem)?.options?.color ?? 'prominent'
                                         }
                                         size={getContentSize(id)}
+                                        line_height={
+                                            (values[rowKey] as TCompareAccountRowItem).options?.line_height ?? 'm'
+                                        }
                                     >
                                         {(values[rowKey] as TCompareAccountRowItem)?.text}
                                     </Text>
@@ -470,7 +435,7 @@ const DMT5CompareModalContent = ({
                             )}
                         </Table.Row>
                     </Table.Header>
-                    {!is_demo_tab && (
+                    {(!is_demo_tab || is_preppstore_demo_eu_client) && (
                         <React.Fragment>
                             <Table.Body>
                                 {getAvailableAccountsContent(getModalContent()).map(row => (

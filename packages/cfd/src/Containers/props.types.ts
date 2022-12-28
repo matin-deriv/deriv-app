@@ -264,7 +264,7 @@ export type TJurisdictionModalFootNoteProps = {
 export type TCompareAccountRowItem = {
     text: string;
     tooltip_msg?: string;
-    options?: Record<string, string | boolean>;
+    options?: Record<string, string | boolean | Record<string, string>>;
 };
 
 export type TCompareAccountContentValues = Record<
@@ -316,4 +316,5 @@ export type TDMT5CompareModalContentProps = {
     real_account_creation_unlock_date: string;
     setShouldShowCooldownModal: (value: boolean) => void;
     is_eu: boolean;
+    is_preppstore_demo_eu_client: boolean;
 };
