@@ -17,9 +17,9 @@ import {
     eu_real_content,
     cr_real_content,
     cr_real_footer_buttons,
-    eu__real_footer_button,
-    preappstore_demo_cr_content,
-    preappstore_demo_cr_footer_buttons,
+    eu_real_footer_button,
+    preappstore_cr_demo_content,
+    preappstore_cr_demo_footer_buttons,
 } from '../Constants/cfd_compare_account_content';
 import { GetSettings, GetAccountSettingsResponse } from '@deriv/api-types';
 
@@ -75,7 +75,7 @@ const DMT5CompareModalContent = ({
             ? 4
             : available_accounts_keys.filter(key => key.startsWith('financial')).length || 1;
 
-    const is_preappstore_demo_cr_account = is_demo_tab && !is_eu && should_show_derivx;
+    const is_preappstore_cr_demo_account = is_demo_tab && !is_eu && should_show_derivx;
     const {
         poi_pending_for_vanuatu,
         poi_pending_for_bvi_labuan_maltainvest,
@@ -262,15 +262,15 @@ const DMT5CompareModalContent = ({
     };
 
     const getModalContent = () => {
-        if (is_preappstore_demo_cr_account) {
-            return preappstore_demo_cr_content;
+        if (is_preappstore_cr_demo_account) {
+            return preappstore_cr_demo_content;
         }
         return show_eu_related ? eu_real_content : cr_real_content;
     };
 
     const modal_footer = () => {
-        if (is_preappstore_demo_cr_account) return preappstore_demo_cr_footer_buttons;
-        return show_eu_related ? eu__real_footer_button : cr_real_footer_buttons;
+        if (is_preappstore_cr_demo_account) return preappstore_cr_demo_footer_buttons;
+        return show_eu_related ? eu_real_footer_button : cr_real_footer_buttons;
     };
     const getContentSize = (id: string) => {
         if (id === 'counterparty' || id === 'leverage') return isDesktop() ? 'xxs' : 'xxxs';
@@ -299,7 +299,7 @@ const DMT5CompareModalContent = ({
     const pre_appstore_class = should_show_derivx && synthetic_accounts_count ? '__pre-appstore' : '';
 
     const getClassNamesForDemoAndEu = () => {
-        if (is_preappstore_demo_cr_account) return 'cfd-accounts-compare-modal-row-demo';
+        if (is_preappstore_cr_demo_account) return 'cfd-accounts-compare-modal-row-demo';
         else if (show_eu_related) return 'cfd-accounts-compare-modal-row-eu';
         return null;
     };
@@ -525,7 +525,7 @@ const DMT5CompareModalContent = ({
                             )}
                         </React.Fragment>
                     )}
-                    {is_preappstore_demo_cr_account && (
+                    {is_preappstore_cr_demo_account && (
                         <React.Fragment>
                             <Table.Body>
                                 {getAvailableAccountsContent(getModalContent()).map(row => (

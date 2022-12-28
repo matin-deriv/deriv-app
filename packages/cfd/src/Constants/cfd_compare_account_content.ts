@@ -167,11 +167,11 @@ export const cr_real_footer_buttons: TCompareAccountFooterButtonData[] = [
     { label: localize('Add'), action: 'financial_labuan' },
     { label: localize('Add'), action: 'derivx' },
 ];
-export const eu__real_footer_button: TCompareAccountFooterButtonData[] = [
+export const eu_real_footer_button: TCompareAccountFooterButtonData[] = [
     { label: localize('Add'), action: 'financial_maltainvest' },
 ];
 
-export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
+export const preappstore_cr_demo_content: TCompareAccountContentProps[] = [
     {
         id: 'platform',
         attribute: localize('Platform'),
@@ -220,7 +220,7 @@ export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
     },
 ];
 
-export const preappstore_demo_cr_footer_buttons: TCompareAccountFooterButtonData[] = [
+export const preappstore_cr_demo_footer_buttons: TCompareAccountFooterButtonData[] = [
     { label: localize('Add'), action: 'synthetic_svg' },
     { label: localize('Add'), action: 'financial_svg' },
     { label: localize('Add'), action: 'derivx' },
