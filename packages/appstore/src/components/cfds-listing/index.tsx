@@ -42,6 +42,18 @@ const CFDsListing = () => {
 
     const accounts_sub_text = is_eu ? localize('Account Information') : localize('Compare accounts');
 
+    const getServerName = React.useCallback((account: TDetailsOfEachMT5Loginid) => {
+        if (account) {
+            const server_region = account.server_info?.geolocation?.region;
+            if (server_region) {
+                return `${server_region} ${
+                    account?.server_info?.geolocation?.sequence === 1 ? '' : account?.server_info?.geolocation?.sequence
+                }`;
+            }
+        }
+        return '';
+    }, []);
+
     const getShortCodeAndRegion = (account: TDetailsOfEachMT5Loginid) => {
         let short_code_and_region;
         if (is_real && !is_eu_user) {
@@ -54,7 +66,7 @@ const CFDsListing = () => {
 
             const region =
                 account.market_type !== 'financial' && account.landing_company_short !== 'bvi'
-                    ? ` - ${account?.server_info?.geolocation?.region}`
+                    ? ` - ${getServerName(account)}`
                     : '';
 
             short_code_and_region = `${short_code}${region}`;
