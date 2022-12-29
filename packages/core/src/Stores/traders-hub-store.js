@@ -3,8 +3,6 @@ import { getAppstorePlatforms, CFD_PLATFORMS, available_traders_hub_cfd_accounts
 import BaseStore from './base-store';
 import { localize } from '@deriv/translations';
 
-const eu_excluded_regex = new RegExp('^mt$');
-
 export default class TradersHubStore extends BaseStore {
     available_platforms = [];
     available_cfd_accounts = [];
@@ -60,7 +58,6 @@ export default class TradersHubStore extends BaseStore {
             can_get_more_cfd_mt5_accounts: computed,
             no_CR_account: computed,
             no_MF_account: computed,
-            is_eu_regulated: computed,
             openDemoCFDAccount: action.bound,
             openModal: action.bound,
             openRealAccount: action.bound,
@@ -119,12 +116,6 @@ export default class TradersHubStore extends BaseStore {
         const { active_accounts } = this.root_store.client;
         const result = active_accounts.some(acc => acc.landing_company_shortcode === 'svg');
         return !result && this.selected_region === 'Non-EU';
-    }
-
-    get is_eu_regulated() {
-        const { landing_companies, residence } = this.root_store.client;
-        if (!landing_companies) return false;
-        return eu_excluded_regex.test(residence);
     }
 
     async selectAccountType(account_type) {
@@ -286,7 +277,7 @@ export default class TradersHubStore extends BaseStore {
     }
     get is_eu_user() {
         // const { is_eu } = this.root_store.client;
-        return this.selected_region === 'EU' || this.is_eu_regulated;
+        return this.selected_region === 'EU';
     }
 
     setActiveIndex(active_index) {
