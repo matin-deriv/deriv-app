@@ -273,7 +273,6 @@ export type TCompareAccountContentValues = Record<
 >;
 
 export type TCompareAccountRowProps = TCompareAccountContentProps & {
-    should_show_derivx: boolean;
     pre_appstore_class: string;
     available_accounts_count: number;
     classname_for_demo_and_eu: string | null;

@@ -28,7 +28,6 @@ const Row = ({
     id,
     attribute,
     values,
-    should_show_derivx,
     pre_appstore_class,
     available_accounts_count,
     classname_for_demo_and_eu,
@@ -363,9 +362,14 @@ const DMT5CompareModalContent = ({
             } else {
                 openDerivRealAccountNeededModal();
             }
-        } else if (is_virtual && !['synthetic_svg', 'financial_svg'].includes(item.action)) {
+        } else if (
+            is_virtual &&
+            !['synthetic_svg', 'financial_svg', 'derivx', 'financial_maltainvest'].includes(item.action)
+        ) {
             openSwitchToRealAccountModal();
-        } else onSelectRealAccount(item);
+        } else {
+            onSelectRealAccount(item);
+        }
     };
 
     const getModalContent = () => {
