@@ -138,26 +138,14 @@ const AccountTransferReceipt = observer(({ onClose, history }: TAccountTransferR
                         large
                     />
                 )}
-                {is_from_pre_appstore && (
-                    <Button
-                        className='account-transfer-receipt__button'
-                        has_effect
-                        text={localize('Close')}
-                        onClick={onClose}
-                        primary
-                        large
-                    />
-                )}
-                {!is_from_pre_appstore && (
-                    <Button
-                        className='account-transfer-receipt__button'
-                        has_effect
-                        text={localize('Make a new transfer')}
-                        onClick={resetAccountTransfer}
-                        primary
-                        large
-                    />
-                )}
+                <Button
+                    className='account-transfer-receipt__button'
+                    has_effect
+                    text={is_from_pre_appstore ? localize('Close') : localize('Make a new transfer')}
+                    onClick={is_from_pre_appstore ? onClose : resetAccountTransfer}
+                    primary
+                    large
+                />
             </div>
             <Modal
                 is_open={is_switch_visible}
