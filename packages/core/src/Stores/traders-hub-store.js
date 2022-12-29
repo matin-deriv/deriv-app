@@ -58,6 +58,8 @@ export default class TradersHubStore extends BaseStore {
             is_eu_selected: computed,
             is_real: computed,
             can_get_more_cfd_mt5_accounts: computed,
+            no_CR_account: computed,
+            no_MF_account: computed,
             is_eu_regulated: computed,
             openDemoCFDAccount: action.bound,
             openModal: action.bound,
@@ -106,6 +108,17 @@ export default class TradersHubStore extends BaseStore {
         );
 
         this.selected_region = 'Non-EU';
+    }
+
+    get no_MF_account() {
+        const { has_maltainvest_account } = this.root_store.client;
+        return this.selected_region === 'EU' && !has_maltainvest_account;
+    }
+
+    get no_CR_account() {
+        const { active_accounts } = this.root_store.client;
+        const result = active_accounts.some(acc => acc.landing_company_shortcode === 'svg');
+        return !result && this.selected_region === 'Non-EU';
     }
 
     get is_eu_regulated() {
