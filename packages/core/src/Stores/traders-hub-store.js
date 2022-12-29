@@ -345,7 +345,7 @@ export default class TradersHubStore extends BaseStore {
         const { account_type } = modules.cfd;
         const { platform } = common;
         if (this.is_demo) {
-            this.openDemoCFDAccount(account_type, platform);
+            this.openDemoCFDAccount(account_type);
         } else {
             this.openRealAccount(account_type, platform);
         }
