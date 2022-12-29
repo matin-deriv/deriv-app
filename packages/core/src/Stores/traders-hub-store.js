@@ -398,11 +398,15 @@ export default class TradersHubStore extends BaseStore {
         return total_balance.balance;
     }
     get can_get_more_cfd_mt5_accounts() {
+        const {
+            client: { isEligibleForMoreRealMt5 },
+        } = this.root_store;
         return (
             this.is_real &&
             !this.is_eu_user &&
             (this.hasCFDAccount(CFD_PLATFORMS.MT5, 'real', 'synthetic') ||
-                this.hasCFDAccount(CFD_PLATFORMS.MT5, 'real', 'financial'))
+                this.hasCFDAccount(CFD_PLATFORMS.MT5, 'real', 'financial')) &&
+            (isEligibleForMoreRealMt5('synthetic') || isEligibleForMoreRealMt5('financial'))
         );
     }
 }
