@@ -3,6 +3,8 @@ import { getAppstorePlatforms, CFD_PLATFORMS, available_traders_hub_cfd_accounts
 import BaseStore from './base-store';
 import { localize } from '@deriv/translations';
 
+const eu_excluded_regex = new RegExp('^mt$');
+
 export default class TradersHubStore extends BaseStore {
     available_platforms = [];
     available_cfd_accounts = [];
@@ -56,6 +58,7 @@ export default class TradersHubStore extends BaseStore {
             is_eu_selected: computed,
             is_real: computed,
             can_get_more_cfd_mt5_accounts: computed,
+            is_eu_regulated: computed,
             openDemoCFDAccount: action.bound,
             openModal: action.bound,
             openRealAccount: action.bound,
@@ -85,13 +88,6 @@ export default class TradersHubStore extends BaseStore {
             }
         );
 
-        reaction(
-            () => [this.selected_account_type],
-            () => {
-                this.switchAccountHandler();
-            }
-        );
-
         const login_id = window.localStorage.getItem('active_loginid') ?? '';
         this.selected_account_type = !/^VRT/.test(login_id) ? 'real' : 'demo';
 
@@ -110,6 +106,12 @@ export default class TradersHubStore extends BaseStore {
         );
 
         this.selected_region = 'Non-EU';
+    }
+
+    get is_eu_regulated() {
+        const { landing_companies, residence } = this.root_store.client;
+        if (!landing_companies) return false;
+        return eu_excluded_regex.test(residence);
     }
 
     async selectAccountType(account_type) {
@@ -141,14 +143,14 @@ export default class TradersHubStore extends BaseStore {
 
     getAvailablePlatforms() {
         const appstore_platforms = getAppstorePlatforms();
-        if (this.selected_region === 'EU') {
+        if (this.is_eu_user) {
             this.available_platforms = appstore_platforms.filter(platform =>
                 ['EU', 'All'].some(region => region === platform.availability)
             );
             return;
-        } else if (this.root_store.client.is_eu) {
+        } else if (this.selected_region === 'Non-EU') {
             this.available_platforms = appstore_platforms.filter(platform =>
-                ['All'].some(region => region === platform.availability)
+                ['Non-EU', 'All'].some(region => region === platform.availability)
             );
             return;
         }
@@ -208,11 +210,6 @@ export default class TradersHubStore extends BaseStore {
                 ['EU', 'All'].some(region => region === account.availability)
             );
             return;
-        } else if (this.root_store.client.is_eu) {
-            this.available_mt5_accounts = this.available_cfd_accounts.filter(account =>
-                ['All'].some(region => region === account.availability)
-            );
-            return;
         }
 
         this.available_mt5_accounts = this.available_cfd_accounts.filter(
@@ -225,13 +222,6 @@ export default class TradersHubStore extends BaseStore {
             this.available_dxtrade_accounts = this.available_cfd_accounts.filter(
                 account =>
                     ['EU', 'All'].some(region => region === account.availability) &&
-                    account.platform === CFD_PLATFORMS.DXTRADE
-            );
-            return;
-        } else if (this.root_store.client.is_eu) {
-            this.available_dxtrade_accounts = this.available_cfd_accounts.filter(
-                account =>
-                    ['All'].some(region => region === account.availability) &&
                     account.platform === CFD_PLATFORMS.DXTRADE
             );
             return;
@@ -282,8 +272,8 @@ export default class TradersHubStore extends BaseStore {
         return this.selected_account_type === 'real';
     }
     get is_eu_user() {
-        const { is_eu } = this.root_store.client;
-        return this.selected_region === 'EU' || is_eu;
+        // const { is_eu } = this.root_store.client;
+        return this.selected_region === 'EU' || this.is_eu_regulated;
     }
 
     setActiveIndex(active_index) {
