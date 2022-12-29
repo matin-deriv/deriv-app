@@ -457,7 +457,6 @@ const DMT5CompareModalContent = ({
                                 <Row
                                     key={row.id}
                                     {...row}
-                                    should_show_derivx={should_show_derivx}
                                     pre_appstore_class={pre_appstore_class}
                                     available_accounts_count={available_accounts_count}
                                     classname_for_demo_and_eu={classname_for_demo_and_eu}
