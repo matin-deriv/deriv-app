@@ -16,6 +16,7 @@ const CFDsListing = () => {
         client,
         modules: { cfd },
         traders_hub,
+        ui,
     } = useStores();
     const {
         available_dxtrade_accounts,
@@ -24,23 +25,35 @@ const CFDsListing = () => {
         has_any_real_account,
         startTrade,
         is_eu_user,
-        is_demo,
+        is_real,
         getExistingAccounts,
         getAccount,
     } = traders_hub;
 
     const { toggleCompareAccountsModal } = cfd;
-    const { is_eu, is_landing_company_loaded } = client;
+    const { is_landing_company_loaded } = client;
     const has_no_real_account = !has_any_real_account;
 
-    const accounts_sub_text = is_eu ? localize('Account Information') : localize('Compare accounts');
+    const accounts_sub_text = is_eu_user ? localize('Account Information') : localize('Compare accounts');
 
-    const getShortCode = (account: TDetailsOfEachMT5Loginid) => {
-        return account.landing_company_short &&
-            account.landing_company_short !== 'svg' &&
-            account.landing_company_short !== 'bvi'
-            ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
-            : account.landing_company_short?.toUpperCase();
+    const getShortCodeAndRegion = (account: TDetailsOfEachMT5Loginid) => {
+        let short_code_and_region;
+        if (is_real && !is_eu_user) {
+            const short_code =
+                account.landing_company_short &&
+                account.landing_company_short !== 'svg' &&
+                account.landing_company_short !== 'bvi'
+                    ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
+                    : account.landing_company_short?.toUpperCase();
+
+            const region =
+                account.market_type !== 'financial' && account.landing_company_short !== 'bvi'
+                    ? ` - ${account?.server_info?.geolocation?.region}`
+                    : '';
+
+            short_code_and_region = `${short_code}${region}`;
+        }
+        return short_code_and_region;
     };
 
     return (
@@ -78,7 +91,7 @@ const CFDsListing = () => {
                 </div>
             )}
 
-            {!is_demo && has_no_real_account && (
+            {is_real && has_no_real_account && (
                 <div className='cfd-full-row'>
                     <AddOptionsAccount />
                 </div>
@@ -103,9 +116,10 @@ const CFDsListing = () => {
                                     existing_account.display_balance,
                                     true
                                 )} ${existing_account.currency}`}
+                                short_code_and_region={getShortCodeAndRegion(existing_account)}
                                 platform={account.platform}
                                 description={existing_account.display_login}
-                                key={`trading_app_card_${account.name}`}
+                                key={`trading_app_card_${existing_account.display_login}`}
                                 type='transfer_trade'
                                 availability={selected_region}
                                 onAction={() => {
@@ -123,7 +137,11 @@ const CFDsListing = () => {
                             type='get'
                             availability={selected_region}
                             onAction={() => {
-                                getAccount(account.market_type, account.platform);
+                                if (has_no_real_account && is_real) {
+                                    ui.openDerivRealAccountNeededModal();
+                                } else {
+                                    getAccount(account.market_type, account.platform);
+                                }
                             }}
                         />
                     );
@@ -131,7 +149,7 @@ const CFDsListing = () => {
             ) : (
                 <PlatformLoader />
             )}
-            {!is_eu_user && !is_eu && (
+            {!is_eu_user && !is_eu_user && (
                 <div className='cfd-full-row'>
                     <hr className='divider' />
                 </div>
@@ -159,10 +177,12 @@ const CFDsListing = () => {
                                 )} ${existing_account.currency}`}
                                 description={existing_account.display_login}
                                 platform={account.platform}
-                                key={`trading_app_card_${account.name}`}
+                                key={`trading_app_card_${existing_account.display_login}`}
                                 type='transfer_trade'
                                 availability={selected_region}
-                                is_disabled={!is_demo ? !has_no_real_account : account.is_disabled}
+                                onAction={() => {
+                                    startTrade(account.platform, existing_account);
+                                }}
                             />
                         ))
                     ) : (
@@ -171,9 +191,12 @@ const CFDsListing = () => {
                             name={account.name}
                             platform={account.platform}
                             description={account.description}
-                            is_disabled={account.is_disabled}
                             onAction={() => {
-                                getAccount(account.market_type, account.platform);
+                                if (has_no_real_account && is_real) {
+                                    ui.openDerivRealAccountNeededModal();
+                                } else {
+                                    getAccount(account.market_type, account.platform);
+                                }
                             }}
                             key={`trading_app_card_${account.name}`}
                             type='get'
