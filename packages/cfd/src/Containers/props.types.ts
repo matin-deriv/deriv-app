@@ -272,9 +272,12 @@ export type TCompareAccountContentValues = Record<
     TCompareAccountRowItem | TCompareAccountRowItem[] | undefined
 >;
 
-export type TCompareAccountInstrumentsRowProps = {
-    attr: string;
-    val: TCompareAccountContentValues;
+export type TCompareAccountRowProps = TCompareAccountContentProps & {
+    should_show_derivx: boolean;
+    pre_appstore_class: string;
+    available_accounts_count: number;
+    classname_for_demo_and_eu: string | null;
+    is_pre_appstore_setting: boolean;
 };
 
 export type TCompareAccountContentProps = {
@@ -306,7 +309,7 @@ export type TDMT5CompareModalContentProps = {
     trading_platform_available_accounts: TTradingPlatformAvailableAccount[];
     toggleCFDPersonalDetailsModal: (is_from_mt5_compare_accounts?: boolean) => void;
     setJurisdictionSelectedShortcode: (shortcode: string) => void;
-    show_eu_related: boolean;
+    is_eu_client: boolean;
     account_status: GetAccountStatus;
     upgradeable_landing_companies: unknown[];
     setAppstorePlatform: (platform: string) => void;
@@ -315,6 +318,8 @@ export type TDMT5CompareModalContentProps = {
     updateAccountStatus: () => void;
     real_account_creation_unlock_date: string;
     setShouldShowCooldownModal: (value: boolean) => void;
-    is_eu: boolean;
-    is_preppstore_demo_eu_client: boolean;
+    show_preappstore_eu_demo: boolean;
+    is_preappstore_cr_demo_account: boolean;
+    show_eu_related: boolean;
+    is_pre_appstore_setting: boolean;
 };

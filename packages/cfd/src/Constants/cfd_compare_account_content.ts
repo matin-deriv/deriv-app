@@ -3,6 +3,13 @@ import { TCompareAccountContentProps, TCompareAccountFooterButtonData } from '..
 
 export const eu_real_content: TCompareAccountContentProps[] = [
     {
+        id: 'platform',
+        attribute: localize('Platform'),
+        values: {
+            financial_maltainvest: { text: localize('MT5'), options: { size: 'xxs' } },
+        },
+    },
+    {
         id: 'jurisdiction',
         attribute: localize('Jurisdiction'),
         values: {
@@ -22,6 +29,7 @@ export const eu_real_content: TCompareAccountContentProps[] = [
         values: {
             financial_maltainvest: {
                 text: localize('Regulated by the Malta Financial Services Authority (MFSA) (licence no. IS/70156)'),
+                options: { styles: { padding: '1.8rem 0.8rem' } },
             },
         },
     },
@@ -29,7 +37,7 @@ export const eu_real_content: TCompareAccountContentProps[] = [
         id: 'leverage',
         attribute: localize('Maximum leverage'),
         values: {
-            financial_maltainvest: { text: localize('Up to 1:30') },
+            financial_maltainvest: { text: localize('Up to 1:30'), options: { size: 'xxxs' } },
         },
     },
     {
@@ -45,7 +53,7 @@ export const eu_real_content: TCompareAccountContentProps[] = [
                 { text: localize('Cryptocurrencies') },
                 {
                     text: localize('*Boom 300 and Crash 300 Index'),
-                    options: { color: 'loss-danger', weight: 'bold' },
+                    options: { color: 'loss-danger', weight: 'bold', styles: { 'padding-top': '2rem' } },
                 },
             ],
         },
@@ -167,11 +175,11 @@ export const cr_real_footer_buttons: TCompareAccountFooterButtonData[] = [
     { label: localize('Add'), action: 'financial_labuan' },
     { label: localize('Add'), action: 'derivx' },
 ];
-export const eu__real_footer_button: TCompareAccountFooterButtonData[] = [
+export const eu_real_footer_button: TCompareAccountFooterButtonData[] = [
     { label: localize('Add'), action: 'financial_maltainvest' },
 ];
 
-export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
+export const preappstore_cr_demo_content: TCompareAccountContentProps[] = [
     {
         id: 'platform',
         attribute: localize('Platform'),
@@ -220,18 +228,18 @@ export const preappstore_demo_cr_content: TCompareAccountContentProps[] = [
     },
 ];
 
-export const preappstore_demo_cr_footer_buttons: TCompareAccountFooterButtonData[] = [
+export const preappstore_cr_demo_footer_buttons: TCompareAccountFooterButtonData[] = [
     { label: localize('Add'), action: 'synthetic_svg' },
     { label: localize('Add'), action: 'financial_svg' },
     { label: localize('Add'), action: 'derivx' },
 ];
 
-export const preppstore_demo_eu_content: TCompareAccountContentProps[] = [
+export const preppstore_eu_demo_content: TCompareAccountContentProps[] = [
     {
         id: 'leverage',
         attribute: localize('Maximum leverage'),
         values: {
-            financial_maltainvest: { text: localize('Up to 1:30') },
+            financial_maltainvest: { text: localize('Up to 1:30'), options: { size: 'xxxs' } },
         },
     },
     {
@@ -247,7 +255,7 @@ export const preppstore_demo_eu_content: TCompareAccountContentProps[] = [
                 { text: localize('Cryptocurrencies') },
                 {
                     text: localize('*Boom 300 and Crash 300 Index'),
-                    options: { color: 'loss-danger', weight: 'bold', line_height: '22.4rem' },
+                    options: { color: 'loss-danger', weight: 'bold', styles: { 'padding-top': '2rem' } },
                 },
             ],
         },

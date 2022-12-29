@@ -10,19 +10,122 @@ import {
     TCompareAccountContentProps,
     TCompareAccountFooterButtonData,
     TCompareAccountContentValues,
-    TCompareAccountInstrumentsRowProps,
+    TCompareAccountRowProps,
     TCompareAccountRowItem,
 } from './props.types';
 import {
     eu_real_content,
     cr_real_content,
     cr_real_footer_buttons,
-    eu__real_footer_button,
-    preappstore_demo_cr_content,
-    preappstore_demo_cr_footer_buttons,
-    preppstore_demo_eu_content,
+    eu_real_footer_button,
+    preappstore_cr_demo_content,
+    preappstore_cr_demo_footer_buttons,
+    preppstore_eu_demo_content,
 } from '../Constants/cfd_compare_account_content';
 import { GetSettings, GetAccountSettingsResponse } from '@deriv/api-types';
+
+const Row = ({
+    id,
+    attribute,
+    values,
+    should_show_derivx,
+    pre_appstore_class,
+    available_accounts_count,
+    classname_for_demo_and_eu,
+    is_pre_appstore_setting,
+}: TCompareAccountRowProps) => {
+    const is_leverage_row = id === 'leverage';
+    const is_platform_row = id === 'platform';
+    const is_instruments_row = id === 'instruments';
+
+    const getContentSize = () => {
+        if (id === 'counterparty' || id === 'leverage') return isDesktop() ? 'xxs' : 'xxxs';
+        return isDesktop() ? 'xxxs' : 'xxxxs';
+    };
+
+    if (is_platform_row && !is_pre_appstore_setting) {
+        return null;
+    }
+    return (
+        <Table.Row
+            className={
+                classname_for_demo_and_eu ??
+                classNames(`cfd-accounts-compare-modal__table-row${pre_appstore_class}`, {
+                    [`cfd-accounts-compare-modal__table-row--leverage${pre_appstore_class}`]: is_leverage_row,
+                    [`cfd-accounts-compare-modal__row-with-columns-count-${available_accounts_count + 1}`]:
+                        available_accounts_count < 6,
+                    [`cfd-accounts-compare-modal__table-row--platform${pre_appstore_class}`]: is_platform_row,
+                    [`cfd-accounts-compare-modal__table-row--instruments${pre_appstore_class}`]: is_instruments_row,
+                })
+            }
+        >
+            <Table.Cell fixed>
+                <Text as='p' weight='bold' color='prominent' size='xxs'>
+                    {attribute}
+                </Text>
+            </Table.Cell>
+
+            {Object.keys(values).map(rowKey => (
+                <Table.Cell
+                    key={rowKey}
+                    className={classNames('cfd-accounts-compare-modal__table-row-item', {
+                        'cfd-accounts-compare-modal__table-row-item--tooltip': (
+                            values[rowKey] as TCompareAccountRowItem
+                        )?.tooltip_msg,
+                    })}
+                >
+                    <>
+                        {Array.isArray(values[rowKey]) ? (
+                            (values[rowKey] as TCompareAccountRowItem[])?.map((item, index) => (
+                                <Text
+                                    key={index}
+                                    as='p'
+                                    color={item?.options?.color ?? 'prominent'}
+                                    weight={item?.options?.weight ?? 'normal'}
+                                    align={item?.options?.align ?? 'center'}
+                                    size={item?.options?.size ?? getContentSize()}
+                                    styles={item?.options?.styles ?? ''}
+                                >
+                                    {item.text}
+                                    {item?.options?.should_show_asterick_at_end && (
+                                        <Text color={'loss-danger'} size={'xxxs'}>
+                                            *
+                                        </Text>
+                                    )}
+                                </Text>
+                            ))
+                        ) : (
+                            <>
+                                <Text
+                                    as='p'
+                                    weight={(values[rowKey] as TCompareAccountRowItem)?.options?.weight ?? 'normal'}
+                                    align={(values[rowKey] as TCompareAccountRowItem)?.options?.align ?? 'center'}
+                                    color={(values[rowKey] as TCompareAccountRowItem)?.options?.color ?? 'prominent'}
+                                    size={(values[rowKey] as TCompareAccountRowItem)?.options?.size ?? getContentSize()}
+                                    styles={(values[rowKey] as TCompareAccountRowItem)?.options?.styles ?? ''}
+                                >
+                                    {(values[rowKey] as TCompareAccountRowItem)?.text}
+                                </Text>
+                                {(values[rowKey] as TCompareAccountRowItem)?.tooltip_msg && (
+                                    <Popover
+                                        alignment='left'
+                                        className='cfd-compare-accounts-tooltip'
+                                        classNameBubble='cfd-compare-accounts-tooltip--msg'
+                                        icon='info'
+                                        disable_message_icon
+                                        is_bubble_hover_enabled
+                                        message={(values[rowKey] as TCompareAccountRowItem)?.tooltip_msg}
+                                        zIndex={9999}
+                                    />
+                                )}
+                            </>
+                        )}
+                    </>
+                </Table.Cell>
+            ))}
+        </Table.Row>
+    );
+};
 
 const DMT5CompareModalContent = ({
     account_settings,
@@ -42,7 +145,7 @@ const DMT5CompareModalContent = ({
     toggleCFDPersonalDetailsModal,
     toggleCompareAccounts,
     trading_platform_available_accounts,
-    show_eu_related,
+    is_eu_client,
     setJurisdictionSelectedShortcode,
     account_status,
     upgradeable_landing_companies,
@@ -52,8 +155,10 @@ const DMT5CompareModalContent = ({
     updateAccountStatus,
     real_account_creation_unlock_date,
     setShouldShowCooldownModal,
-    is_eu,
-    is_preppstore_demo_eu_client,
+    show_preappstore_eu_demo,
+    is_preappstore_cr_demo_account,
+    show_eu_related,
+    is_pre_appstore_setting,
 }: TDMT5CompareModalContentProps) => {
     const [has_submitted_personal_details, setHasSubmittedPersonalDetails] = React.useState(false);
 
@@ -64,20 +169,17 @@ const DMT5CompareModalContent = ({
     const has_synthetic = trading_platform_available_accounts.some(account => account.market_type === 'gaming');
     const available_accounts_keys = [...mt5_platforms, ...(should_show_derivx && has_synthetic ? ['derivx'] : [])];
 
-    const logged_out_available_accounts_count = show_eu_related ? 1 : 6;
+    const logged_out_available_accounts_count = is_eu_client ? 1 : 6;
     const available_accounts_count = is_logged_in
         ? available_accounts_keys.length
         : logged_out_available_accounts_count;
     const synthetic_accounts_count =
-        !is_logged_in && !show_eu_related
-            ? 2
-            : available_accounts_keys.filter(key => key.startsWith('synthetic')).length;
+        !is_logged_in && !is_eu_client ? 2 : available_accounts_keys.filter(key => key.startsWith('synthetic')).length;
     const financial_accounts_count =
-        !is_logged_in && !show_eu_related
+        !is_logged_in && !is_eu_client
             ? 4
             : available_accounts_keys.filter(key => key.startsWith('financial')).length || 1;
 
-    const is_preappstore_demo_cr_account = is_demo_tab && !is_eu && should_show_derivx;
     const {
         poi_pending_for_vanuatu,
         poi_pending_for_bvi_labuan_maltainvest,
@@ -113,7 +215,7 @@ const DMT5CompareModalContent = ({
 
     const getAvailableAccountsContent = (modal_content: TCompareAccountContentProps[]) => {
         if (!is_logged_in) {
-            if (show_eu_related) {
+            if (is_eu_client) {
                 return modal_content;
             }
             const mt5_data = modal_content.map(item => {
@@ -129,7 +231,7 @@ const DMT5CompareModalContent = ({
             );
             const content_data = { ...row_data, values: {} as TCompareAccountContentValues };
             const col_num = should_show_derivx ? 7 : 6;
-            if (available_accounts_keys.length < col_num && !show_eu_related) {
+            if (available_accounts_keys.length < col_num && !is_eu_client) {
                 // order of the values matters for data to be correctly displayed in the table
                 const sorted_values = [
                     'synthetic_svg',
@@ -216,7 +318,10 @@ const DMT5CompareModalContent = ({
             case 'financial_maltainvest':
                 setAppstorePlatform(CFD_PLATFORMS.MT5);
                 setJurisdictionSelectedShortcode('maltainvest');
-                if (poi_poa_verified_for_bvi_labuan_maltainvest && !poi_or_poa_not_submitted) {
+                if (
+                    (!is_demo_tab && poi_poa_verified_for_bvi_labuan_maltainvest && !poi_or_poa_not_submitted) ||
+                    is_demo_tab
+                ) {
                     openPasswordModal(type_of_account);
                 } else {
                     toggleCFDVerificationModal();
@@ -264,23 +369,20 @@ const DMT5CompareModalContent = ({
     };
 
     const getModalContent = () => {
-        if (is_preappstore_demo_cr_account) {
-            return preappstore_demo_cr_content;
-        } else if (is_preppstore_demo_eu_client) {
-            return preppstore_demo_eu_content;
+        if (is_preappstore_cr_demo_account) {
+            return preappstore_cr_demo_content;
+        } else if (show_eu_related) {
+            if (show_preappstore_eu_demo) {
+                return preppstore_eu_demo_content;
+            }
+            return eu_real_content;
         }
-        return show_eu_related ? eu_real_content : cr_real_content;
+        return cr_real_content;
     };
-
-    console.log(getModalContent());
 
     const modal_footer = () => {
-        if (is_preappstore_demo_cr_account) return preappstore_demo_cr_footer_buttons;
-        return show_eu_related ? eu__real_footer_button : cr_real_footer_buttons;
-    };
-    const getContentSize = (id: string) => {
-        if (id === 'counterparty' || id === 'leverage') return isDesktop() ? 'xxs' : 'xxxs';
-        return isDesktop() ? 'xxxs' : 'xxxxs';
+        if (is_preappstore_cr_demo_account) return preappstore_cr_demo_footer_buttons;
+        return is_eu_client ? eu_real_footer_button : cr_real_footer_buttons;
     };
 
     const shouldShowPendingStatus = (item: TCompareAccountFooterButtonData) => {
@@ -305,103 +407,12 @@ const DMT5CompareModalContent = ({
     const pre_appstore_class = should_show_derivx && synthetic_accounts_count ? '__pre-appstore' : '';
 
     const getClassNamesForDemoAndEu = () => {
-        if (is_preappstore_demo_cr_account) return 'cfd-accounts-compare-modal-row-demo';
-        else if (show_eu_related) return 'cfd-accounts-compare-modal-row-eu';
+        if (is_preappstore_cr_demo_account) return 'cfd-accounts-compare-modal-row-demo';
+        else if (is_eu_client) return 'cfd-accounts-compare-modal-row-eu';
         return null;
     };
 
-    const Row = ({ id, attribute, values }: TCompareAccountContentProps) => {
-        const is_leverage_row = id === 'leverage';
-        const is_platform_row = id === 'platform';
-        const is_instruments_row = id === 'instruments';
-        if (is_platform_row && !should_show_derivx) {
-            return null;
-        }
-        return (
-            <Table.Row
-                className={
-                    getClassNamesForDemoAndEu() ??
-                    classNames(`cfd-accounts-compare-modal__table-row${pre_appstore_class}`, {
-                        [`cfd-accounts-compare-modal__table-row--leverage${pre_appstore_class}`]: is_leverage_row,
-                        [`cfd-accounts-compare-modal__row-with-columns-count-${available_accounts_count + 1}`]:
-                            available_accounts_count < 6,
-                        [`cfd-accounts-compare-modal__table-row--platform${pre_appstore_class}`]: is_platform_row,
-                        [`cfd-accounts-compare-modal__table-row--instruments${pre_appstore_class}`]: is_instruments_row,
-                    })
-                }
-            >
-                <Table.Cell fixed>
-                    <Text as='p' weight='bold' color='prominent' size='xxs'>
-                        {attribute}
-                    </Text>
-                </Table.Cell>
-
-                {Object.keys(values).map(rowKey => (
-                    <Table.Cell
-                        key={rowKey}
-                        className={classNames('cfd-accounts-compare-modal__table-row-item', {
-                            'cfd-accounts-compare-modal__table-row-item--tooltip': (
-                                values[rowKey] as TCompareAccountRowItem
-                            )?.tooltip_msg,
-                        })}
-                    >
-                        <>
-                            {Array.isArray(values[rowKey]) ? (
-                                (values[rowKey] as TCompareAccountRowItem[])?.map((item, index) => (
-                                    <Text
-                                        key={index}
-                                        as='p'
-                                        color={item?.options?.color ?? 'prominent'}
-                                        weight={item?.options?.weight ?? 'normal'}
-                                        align={item?.options?.align ?? 'center'}
-                                        size={getContentSize(id)}
-                                        line_height={item?.options?.line_height ?? 'm'}
-                                    >
-                                        {console.log(item?.options?.line_height)}
-                                        {item.text}
-                                        {item?.options?.should_show_asterick_at_end && (
-                                            <Text color={'loss-danger'} size={'xxxs'}>
-                                                *
-                                            </Text>
-                                        )}
-                                    </Text>
-                                ))
-                            ) : (
-                                <>
-                                    <Text
-                                        as='p'
-                                        weight={(values[rowKey] as TCompareAccountRowItem)?.options?.weight ?? 'normal'}
-                                        align={(values[rowKey] as TCompareAccountRowItem)?.options?.align ?? 'center'}
-                                        color={
-                                            (values[rowKey] as TCompareAccountRowItem)?.options?.color ?? 'prominent'
-                                        }
-                                        size={getContentSize(id)}
-                                        line_height={
-                                            (values[rowKey] as TCompareAccountRowItem).options?.line_height ?? 'm'
-                                        }
-                                    >
-                                        {(values[rowKey] as TCompareAccountRowItem)?.text}
-                                    </Text>
-                                    {(values[rowKey] as TCompareAccountRowItem)?.tooltip_msg && (
-                                        <Popover
-                                            alignment='left'
-                                            className='cfd-compare-accounts-tooltip'
-                                            classNameBubble='cfd-compare-accounts-tooltip--msg'
-                                            icon='info'
-                                            disable_message_icon
-                                            is_bubble_hover_enabled
-                                            message={(values[rowKey] as TCompareAccountRowItem)?.tooltip_msg}
-                                            zIndex={9999}
-                                        />
-                                    )}
-                                </>
-                            )}
-                        </>
-                    </Table.Cell>
-                ))}
-            </Table.Row>
-        );
-    };
+    const classname_for_demo_and_eu = getClassNamesForDemoAndEu();
 
     return (
         <div className='cfd-accounts-compare-modal'>
@@ -410,7 +421,7 @@ const DMT5CompareModalContent = ({
                     <Table.Header>
                         <Table.Row
                             className={
-                                getClassNamesForDemoAndEu() ??
+                                classname_for_demo_and_eu ??
                                 classNames(`cfd-accounts-compare-modal__table-header${pre_appstore_class}`, {
                                     [`cfd-accounts-compare-modal__table-header-for-synthetic-${synthetic_accounts_count}-financial-${financial_accounts_count}${pre_appstore_class}`]:
                                         available_accounts_count < 6,
@@ -418,14 +429,14 @@ const DMT5CompareModalContent = ({
                             }
                         >
                             <Table.Head fixed className='cfd-accounts-compare-modal__table-empty-cell' />
-                            {!show_eu_related && synthetic_accounts_count > 0 && (
+                            {!is_eu_client && synthetic_accounts_count > 0 && (
                                 <Table.Head className='cfd-accounts-compare-modal__table-header-item'>
                                     {localize('Derived')}
                                 </Table.Head>
                             )}
                             {financial_accounts_count > 0 && (
                                 <Table.Head className='cfd-accounts-compare-modal__table-header-item'>
-                                    {show_eu_related ? localize('CFDs') : localize('Financial')}
+                                    {is_eu_client ? localize('CFDs') : localize('Financial')}
                                 </Table.Head>
                             )}
                             {should_show_derivx && synthetic_accounts_count > 0 && (
@@ -435,79 +446,48 @@ const DMT5CompareModalContent = ({
                             )}
                         </Table.Row>
                     </Table.Header>
-                    {(!is_demo_tab || is_preppstore_demo_eu_client) && (
-                        <React.Fragment>
-                            <Table.Body>
-                                {getAvailableAccountsContent(getModalContent()).map(row => (
-                                    <Row key={row.id} {...row} />
-                                ))}
-                            </Table.Body>
-                            {is_logged_in && (
-                                <Table.Row
-                                    className={
-                                        show_eu_related
-                                            ? 'cfd-accounts-compare-modal-row-eu columns-2'
-                                            : classNames(
-                                                  `cfd-accounts-compare-modal__table-footer${pre_appstore_class}`,
-                                                  {
-                                                      [`cfd-accounts-compare-modal__row-with-columns-count-${
-                                                          available_accounts_count + 1
-                                                      }`]: available_accounts_count < 6,
-                                                  }
-                                              )
-                                    }
-                                >
-                                    <Table.Cell fixed className='cfd-accounts-compare-modal__table-empty-cell' />
-                                    {getAvailableAccountsFooterButtons(modal_footer()).map((item, index) => (
-                                        <Table.Cell
-                                            key={index}
-                                            className='cfd-accounts-compare-modal__table-footer__item'
-                                        >
-                                            {shouldShowPendingStatus(item) ? (
-                                                <div className='cfd-accounts-compare-modal__table-footer__item--verification-pending'>
-                                                    <Text size={isDesktop ? 'xxs' : 'xxxs'} align='center'>
-                                                        {localize('Pending verification')}
-                                                    </Text>
-                                                </div>
-                                            ) : (
-                                                <Button
-                                                    className='cfd-accounts-compare-modal__table-footer__button'
-                                                    disabled={
-                                                        item.action === 'derivx'
-                                                            ? isDxtradeAccountAdded(item)
-                                                            : isMt5AccountAdded(item)
-                                                    }
-                                                    type='button'
-                                                    primary_light
-                                                    onClick={() => onButtonClick(item)}
-                                                >
-                                                    {item.label}
-                                                </Button>
-                                            )}
-                                        </Table.Cell>
-                                    ))}
-                                </Table.Row>
-                            )}
-                        </React.Fragment>
-                    )}
-                    {is_preappstore_demo_cr_account && (
-                        <React.Fragment>
-                            <Table.Body>
-                                {getAvailableAccountsContent(getModalContent()).map(row => (
-                                    <Row key={row.id} {...row} />
-                                ))}
-                            </Table.Body>
-                            {is_logged_in && (
-                                <Table.Row className='cfd-accounts-compare-modal-row-demo'>
+
+                    <React.Fragment>
+                        <Table.Body>
+                            {getAvailableAccountsContent(getModalContent()).map(row => (
+                                <Row
+                                    key={row.id}
+                                    {...row}
+                                    should_show_derivx={should_show_derivx}
+                                    pre_appstore_class={pre_appstore_class}
+                                    available_accounts_count={available_accounts_count}
+                                    classname_for_demo_and_eu={classname_for_demo_and_eu}
+                                    is_pre_appstore_setting={is_pre_appstore_setting}
+                                />
+                            ))}
+                        </Table.Body>
+                        {is_logged_in && (
+                            <Table.Row
+                                className={
+                                    classname_for_demo_and_eu ??
+                                    classNames(`cfd-accounts-compare-modal__table-footer${pre_appstore_class}`, {
+                                        [`cfd-accounts-compare-modal__row-with-columns-count-${
+                                            available_accounts_count + 1
+                                        }`]: available_accounts_count < 6,
+                                    })
+                                }
+                            >
+                                <Table.Cell fixed className='cfd-accounts-compare-modal__table-empty-cell' />
+                                {getAvailableAccountsFooterButtons(modal_footer()).map((item, index) => (
                                     <Table.Cell
-                                        fixed
-                                        className='cfd-accounts-compare-modal__table-empty-cell cfd-accounts-compare-modal__table-footer__item'
-                                    />
-                                    {getAvailableAccountsFooterButtons(modal_footer()).map((item, index) => (
-                                        <Table.Cell
-                                            key={index}
-                                            className='cfd-accounts-compare-modal__table-footer__item'
-                                        >
+                                        key={index}
+                                        className={classNames('cfd-accounts-compare-modal__table-footer__item', {
+                                            [`cfd-accounts-compare-modal__table-footer__item--eu-pre_appstore}`]:
+                                                is_pre_appstore_setting && show_eu_related,
+                                        })}
+                                    >
+                                        {!is_demo_tab && shouldShowPendingStatus(item) ? (
+                                            <div className='cfd-accounts-compare-modal__table-footer__item--verification-pending'>
+                                                <Text size={isDesktop ? 'xxs' : 'xxxs'} align='center'>
+                                                    {localize('Pending verification')}
+                                                </Text>
+                                            </div>
+                                        ) : (
                                             <Button
                                                 className='cfd-accounts-compare-modal__table-footer__button'
                                                 disabled={
@@ -521,12 +501,12 @@ const DMT5CompareModalContent = ({
                                             >
                                                 {item.label}
                                             </Button>
-                                        </Table.Cell>
-                                    ))}
-                                </Table.Row>
-                            )}
-                        </React.Fragment>
-                    )}
+                                        )}
+                                    </Table.Cell>
+                                ))}
+                            </Table.Row>
+                        )}
+                    </React.Fragment>
                 </Table>
             </div>
         </div>
