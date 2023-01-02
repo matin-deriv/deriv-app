@@ -159,26 +159,26 @@ export default class TradersHubStore extends BaseStore {
 
         if (is_logged_in) {
             if (this.is_demo && upgradeable_landing_companies?.includes('svg')) {
-                return 'show_cr_demo_content';
+                return 'cr_demo_content';
             } else if (
                 upgradeable_landing_companies.includes('svg') &&
                 upgradeable_landing_companies.includes('maltainvest') &&
                 !this.is_demo
             ) {
-                if (this.is_eu_user) return 'show_low_risk_cr_eu_content';
-                return 'show_low_risk_cr_non_eu_content';
+                if (this.is_eu_user) return 'low_risk_cr_eu_content';
+                return 'low_risk_cr_non_eu_content';
             } else if (
                 upgradeable_landing_companies.length === 1 &&
                 upgradeable_landing_companies.includes('maltainvest')
             ) {
-                if (this.is_demo) return 'show_eu_demo_content';
-                return 'show_eu_real_content';
+                if (this.is_demo) return 'eu_demo_content';
+                return 'eu_real_content';
             } else if (
                 upgradeable_landing_companies.length === 1 &&
                 upgradeable_landing_companies.includes('svg') &&
                 !this.is_eu_user
             ) {
-                return 'show_high_risk_cr_content';
+                return 'high_risk_cr_content';
             }
             return null;
         }
