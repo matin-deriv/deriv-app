@@ -46,7 +46,7 @@ const Row = ({
     if (is_platform_row && !is_pre_appstore_setting) {
         return null;
     }
-    if (is_platform_row && account_flag === ACCOUNT_FLAG.HIGH_RISK_CR) {
+    if (is_platform_row && account_flag === ACCOUNT_FLAG.HIGH_RISK_CR_CONTENT) {
         // needed to adjust the design for high risk
         values.financial_svg = { text: 'MT5' };
     }
