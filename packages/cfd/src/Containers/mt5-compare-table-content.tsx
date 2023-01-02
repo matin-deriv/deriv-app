@@ -2,7 +2,7 @@ import React from 'react';
 import classNames from 'classnames';
 import { Table, Button, Text, Popover } from '@deriv/components';
 import { localize } from '@deriv/translations';
-import { isDesktop, WS, getAuthenticationStatusInfo, CFD_PLATFORMS } from '@deriv/shared';
+import { isDesktop, WS, getAuthenticationStatusInfo, CFD_PLATFORMS, ACCOUNT_FLAG } from '@deriv/shared';
 import { connect } from '../Stores/connect';
 import RootStore from '../Stores/index';
 import {
@@ -21,7 +21,6 @@ import {
     preappstore_cr_demo_content,
     preappstore_cr_demo_footer_buttons,
     preppstore_eu_demo_content,
-    ACCOUNT_FLAG,
 } from '../Constants/cfd_compare_account_content';
 import { GetSettings, GetAccountSettingsResponse } from '@deriv/api-types';
 
@@ -48,6 +47,7 @@ const Row = ({
         return null;
     }
     if (is_platform_row && account_flag === ACCOUNT_FLAG.HIGH_RISK_CR) {
+        // needed to adjust the design for high risk
         values.financial_svg = { text: 'MT5' };
     }
     return (
@@ -132,38 +132,36 @@ const Row = ({
 };
 
 const DMT5CompareModalContent = ({
+    account_flag,
     account_settings,
-    setAccountSettings,
-    setAccountType,
+    account_status,
     clearCFDError,
     current_list,
     has_real_account,
-    is_logged_in,
     is_demo_tab,
+    is_logged_in,
+    is_pre_appstore_setting,
+    is_preappstore_cr_demo_account,
     is_real_enabled,
     is_virtual,
     openDerivRealAccountNeededModal,
     openPasswordModal,
     openSwitchToRealAccountModal,
-    toggleCFDVerificationModal,
+    real_account_creation_unlock_date,
+    setAccountSettings,
+    setAccountType,
+    setAppstorePlatform,
+    setJurisdictionSelectedShortcode,
+    setShouldShowCooldownModal,
+    should_restrict_bvi_account_creation,
+    should_show_derivx,
+    show_eu_related,
     toggleCFDPersonalDetailsModal,
+    toggleCFDVerificationModal,
     toggleCompareAccounts,
     trading_platform_available_accounts,
-    is_eu_client,
-    setJurisdictionSelectedShortcode,
-    account_status,
-    upgradeable_landing_companies,
-    setAppstorePlatform,
-    should_show_derivx,
-    should_restrict_bvi_account_creation,
     updateAccountStatus,
-    real_account_creation_unlock_date,
-    setShouldShowCooldownModal,
-    show_preappstore_eu_demo,
-    is_preappstore_cr_demo_account,
-    show_eu_related,
-    is_pre_appstore_setting,
-    account_flag,
+    upgradeable_landing_companies,
 }: TDMT5CompareModalContentProps) => {
     const [has_submitted_personal_details, setHasSubmittedPersonalDetails] = React.useState(false);
 
@@ -174,14 +172,16 @@ const DMT5CompareModalContent = ({
     const has_synthetic = trading_platform_available_accounts.some(account => account.market_type === 'gaming');
     const available_accounts_keys = [...mt5_platforms, ...(should_show_derivx && has_synthetic ? ['derivx'] : [])];
 
-    const logged_out_available_accounts_count = is_eu_client ? 1 : 6;
+    const logged_out_available_accounts_count = show_eu_related ? 1 : 6;
     const available_accounts_count = is_logged_in
         ? available_accounts_keys.length
         : logged_out_available_accounts_count;
     const synthetic_accounts_count =
-        !is_logged_in && !is_eu_client ? 2 : available_accounts_keys.filter(key => key.startsWith('synthetic')).length;
+        !is_logged_in && !show_eu_related
+            ? 2
+            : available_accounts_keys.filter(key => key.startsWith('synthetic')).length;
     const financial_accounts_count =
-        !is_logged_in && !is_eu_client
+        !is_logged_in && !show_eu_related
             ? 4
             : available_accounts_keys.filter(key => key.startsWith('financial')).length || 1;
 
@@ -220,7 +220,7 @@ const DMT5CompareModalContent = ({
 
     const getAvailableAccountsContent = (modal_content: TCompareAccountContentProps[]) => {
         if (!is_logged_in) {
-            if (is_eu_client) {
+            if (show_eu_related) {
                 return modal_content;
             }
             const mt5_data = modal_content.map(item => {
@@ -236,7 +236,7 @@ const DMT5CompareModalContent = ({
             );
             const content_data = { ...row_data, values: {} as TCompareAccountContentValues };
             const col_num = should_show_derivx ? 7 : 6;
-            if (available_accounts_keys.length < col_num && !is_eu_client) {
+            if (available_accounts_keys.length < col_num && !show_eu_related) {
                 // order of the values matters for data to be correctly displayed in the table
                 const sorted_values = [
                     'synthetic_svg',
@@ -392,7 +392,7 @@ const DMT5CompareModalContent = ({
 
     const modal_footer = () => {
         if (is_preappstore_cr_demo_account) return preappstore_cr_demo_footer_buttons;
-        return is_eu_client ? eu_real_footer_button : cr_real_footer_buttons;
+        return show_eu_related ? eu_real_footer_button : cr_real_footer_buttons;
     };
 
     const shouldShowPendingStatus = (item: TCompareAccountFooterButtonData) => {
@@ -418,7 +418,7 @@ const DMT5CompareModalContent = ({
 
     const getClassNamesForDemoAndEu = () => {
         if (is_preappstore_cr_demo_account) return 'cfd-accounts-compare-modal-row-demo';
-        else if (is_eu_client) return 'cfd-accounts-compare-modal-row-eu';
+        else if (show_eu_related) return 'cfd-accounts-compare-modal-row-eu';
         return null;
     };
 
@@ -439,14 +439,14 @@ const DMT5CompareModalContent = ({
                             }
                         >
                             <Table.Head fixed className='cfd-accounts-compare-modal__table-empty-cell' />
-                            {!is_eu_client && synthetic_accounts_count > 0 && (
+                            {!show_eu_related && synthetic_accounts_count > 0 && (
                                 <Table.Head className='cfd-accounts-compare-modal__table-header-item'>
                                     {localize('Derived')}
                                 </Table.Head>
                             )}
                             {financial_accounts_count > 0 && (
                                 <Table.Head className='cfd-accounts-compare-modal__table-header-item'>
-                                    {is_eu_client ? localize('CFDs') : localize('Financial')}
+                                    {show_eu_related ? localize('CFDs') : localize('Financial')}
                                 </Table.Head>
                             )}
                             {should_show_derivx && synthetic_accounts_count > 0 && (
@@ -482,7 +482,13 @@ const DMT5CompareModalContent = ({
                                     })
                                 }
                             >
-                                <Table.Cell fixed className='cfd-accounts-compare-modal__table-empty-cell' />
+                                <Table.Cell
+                                    fixed
+                                    className={
+                                        'cfd-accounts-compare-modal__table-empty-cell cfd-accounts-compare-modal__table-footer__item'
+                                    }
+                                />
+
                                 {getAvailableAccountsFooterButtons(modal_footer()).map((item, index) => (
                                     <Table.Cell
                                         key={index}
