@@ -62,6 +62,7 @@ export default class TradersHubStore extends BaseStore {
             is_real: computed,
             no_CR_account: computed,
             no_MF_account: computed,
+            account_flag: computed,
             openDemoCFDAccount: action.bound,
             openModal: action.bound,
             openRealAccount: action.bound,
@@ -85,6 +86,7 @@ export default class TradersHubStore extends BaseStore {
                 this.root_store.client.account_list,
                 this.root_store.client.mt5_login_list,
                 this.root_store.client.dxtrade_accounts_list,
+                this.root_store.client.upgradeable_landing_companies,
             ],
             () => {
                 this.getDemoLoginId();
@@ -150,6 +152,37 @@ export default class TradersHubStore extends BaseStore {
     get is_demo_low_risk() {
         const { is_low_risk } = this.root_store.client;
         return this.is_demo && is_low_risk;
+    }
+
+    get account_flag() {
+        const { is_logged_in, upgradeable_landing_companies } = this.root_store.client;
+
+        if (is_logged_in) {
+            if (this.is_demo && upgradeable_landing_companies?.includes('svg')) {
+                return 'show_cr_demo_account';
+            } else if (
+                upgradeable_landing_companies.includes('svg') &&
+                upgradeable_landing_companies.includes('maltainvest') &&
+                !this.is_demo
+            ) {
+                if (this.is_eu_user) return 'show_low_risk_cr_eu';
+                return 'show_low_risk_cr_non_eu';
+            } else if (
+                upgradeable_landing_companies.length === 1 &&
+                upgradeable_landing_companies.includes('maltainvest')
+            ) {
+                if (this.is_demo) return 'show_eu_demo';
+                return 'show_eu_real';
+            } else if (
+                upgradeable_landing_companies.length === 1 &&
+                upgradeable_landing_companies.includes('svg') &&
+                !this.is_eu_user
+            ) {
+                return 'show_high_risk_cr';
+            }
+            return null;
+        }
+        return null;
     }
 
     getAvailablePlatforms() {

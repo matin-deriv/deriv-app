@@ -21,6 +21,7 @@ import {
     preappstore_cr_demo_content,
     preappstore_cr_demo_footer_buttons,
     preppstore_eu_demo_content,
+    ACCOUNT_FLAG,
 } from '../Constants/cfd_compare_account_content';
 import { GetSettings, GetAccountSettingsResponse } from '@deriv/api-types';
 
@@ -32,6 +33,7 @@ const Row = ({
     available_accounts_count,
     classname_for_demo_and_eu,
     is_pre_appstore_setting,
+    account_flag,
 }: TCompareAccountRowProps) => {
     const is_leverage_row = id === 'leverage';
     const is_platform_row = id === 'platform';
@@ -44,6 +46,9 @@ const Row = ({
 
     if (is_platform_row && !is_pre_appstore_setting) {
         return null;
+    }
+    if (is_platform_row && account_flag === ACCOUNT_FLAG.HIGH_RISK_CR) {
+        values.financial_svg = { text: 'MT5' };
     }
     return (
         <Table.Row
@@ -158,6 +163,7 @@ const DMT5CompareModalContent = ({
     is_preappstore_cr_demo_account,
     show_eu_related,
     is_pre_appstore_setting,
+    account_flag,
 }: TDMT5CompareModalContentProps) => {
     const [has_submitted_personal_details, setHasSubmittedPersonalDetails] = React.useState(false);
 
@@ -376,7 +382,7 @@ const DMT5CompareModalContent = ({
         if (is_preappstore_cr_demo_account) {
             return preappstore_cr_demo_content;
         } else if (show_eu_related) {
-            if (show_preappstore_eu_demo) {
+            if (is_pre_appstore_setting && account_flag === ACCOUNT_FLAG.EU_DEMO_CONTENT) {
                 return preppstore_eu_demo_content;
             }
             return eu_real_content;
@@ -461,6 +467,7 @@ const DMT5CompareModalContent = ({
                                     available_accounts_count={available_accounts_count}
                                     classname_for_demo_and_eu={classname_for_demo_and_eu}
                                     is_pre_appstore_setting={is_pre_appstore_setting}
+                                    account_flag={account_flag}
                                 />
                             ))}
                         </Table.Body>

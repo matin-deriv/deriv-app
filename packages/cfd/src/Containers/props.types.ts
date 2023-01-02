@@ -277,6 +277,7 @@ export type TCompareAccountRowProps = TCompareAccountContentProps & {
     available_accounts_count: number;
     classname_for_demo_and_eu: string | null;
     is_pre_appstore_setting: boolean;
+    account_flag: string;
 };
 
 export type TCompareAccountContentProps = {
@@ -321,4 +322,5 @@ export type TDMT5CompareModalContentProps = {
     is_preappstore_cr_demo_account: boolean;
     show_eu_related: boolean;
     is_pre_appstore_setting: boolean;
+    account_flag: string;
 };
