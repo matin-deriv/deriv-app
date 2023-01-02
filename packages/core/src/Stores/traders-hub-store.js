@@ -1,5 +1,5 @@
 import { action, makeObservable, observable, reaction, computed } from 'mobx';
-import { getAppstorePlatforms, CFD_PLATFORMS, available_traders_hub_cfd_accounts } from '@deriv/shared';
+import { getAppstorePlatforms, CFD_PLATFORMS, available_traders_hub_cfd_accounts, formatMoney } from '@deriv/shared';
 import BaseStore from './base-store';
 import { localize } from '@deriv/translations';
 
@@ -8,6 +8,7 @@ export default class TradersHubStore extends BaseStore {
     available_cfd_accounts = [];
     available_mt5_accounts = [];
     available_dxtrade_accounts = [];
+    combined_cfd_mt5_accounts = [];
     selected_account_type;
     selected_region;
     is_regulators_compare_modal_visible = false;
@@ -36,6 +37,7 @@ export default class TradersHubStore extends BaseStore {
             available_cfd_accounts: observable,
             available_dxtrade_accounts: observable,
             available_mt5_accounts: observable,
+            combined_cfd_mt5_accounts: observable,
             available_platforms: observable,
             is_regulators_compare_modal_visible: observable,
             is_tour_open: observable,
@@ -70,6 +72,7 @@ export default class TradersHubStore extends BaseStore {
             toggleAccountTypeModalVisibility: action.bound,
             toggleIsTourOpen: action.bound,
             toggleRegulatorsCompareModal: action.bound,
+            setCombinedCFDMT5Accounts: action.bound,
         });
 
         reaction(
@@ -206,6 +209,7 @@ export default class TradersHubStore extends BaseStore {
         });
         this.getAvailableDxtradeAccounts();
         this.getAvailableMt5Accounts();
+        this.setCombinedCFDMT5Accounts();
     }
 
     getAvailableMt5Accounts() {
@@ -240,7 +244,7 @@ export default class TradersHubStore extends BaseStore {
     }
 
     getExistingAccounts(platform, market_type) {
-        const { current_list } = this.root_store.modules.cfd;
+        const current_list = this.root_store.modules?.cfd?.current_list || [];
         const current_list_keys = Object.keys(current_list);
         const selected_account_type = this.selected_account_type;
         const existing_accounts = current_list_keys
@@ -293,21 +297,17 @@ export default class TradersHubStore extends BaseStore {
         }
     }
 
-    openDemoCFDAccount(account_type) {
-        const { client, modules } = this.root_store;
-        const {
-            standpoint,
-            createCFDAccount,
-            enableCFDPasswordModal,
-            openAccountNeededModal,
-            has_maltainvest_account,
-        } = modules.cfd;
+    openDemoCFDAccount(account_type, platform) {
+        const { client, modules, ui } = this.root_store;
+        const { standpoint, createCFDAccount, enableCFDPasswordModal, has_maltainvest_account } = modules.cfd;
+
+        const { openAccountNeededModal } = ui;
         const { is_eu } = client;
         if (is_eu && !has_maltainvest_account && standpoint?.iom) {
             openAccountNeededModal('maltainvest', localize('Deriv Multipliers'), localize('demo CFDs'));
             return;
         }
-        createCFDAccount(account_type);
+        createCFDAccount({ ...account_type, platform });
         enableCFDPasswordModal();
     }
 
@@ -318,7 +318,7 @@ export default class TradersHubStore extends BaseStore {
         if (has_active_real_account && platform === CFD_PLATFORMS.MT5) {
             toggleJurisdictionModal();
         } else {
-            createCFDAccount(account_type);
+            createCFDAccount({ ...account_type, platform });
             enableCFDPasswordModal();
         }
     }
@@ -349,7 +349,7 @@ export default class TradersHubStore extends BaseStore {
         const { account_type } = modules.cfd;
         const { platform } = common;
         if (this.is_demo) {
-            this.openDemoCFDAccount(account_type);
+            this.openDemoCFDAccount(account_type, platform);
         } else {
             this.openRealAccount(account_type, platform);
         }
@@ -412,5 +412,79 @@ export default class TradersHubStore extends BaseStore {
                 this.hasCFDAccount(CFD_PLATFORMS.MT5, 'real', 'financial')) &&
             (isEligibleForMoreRealMt5('synthetic') || isEligibleForMoreRealMt5('financial'))
         );
+    }
+    getServerName = account => {
+        if (account) {
+            const server_region = account.server_info?.geolocation?.region;
+            if (server_region) {
+                return `${server_region} ${
+                    account?.server_info?.geolocation?.sequence === 1 ? '' : account?.server_info?.geolocation?.sequence
+                }`;
+            }
+        }
+        return '';
+    };
+
+    getShortCodeAndRegion(account) {
+        let short_code_and_region;
+        if (this.is_real && !this.is_eu_user) {
+            const short_code =
+                account.landing_company_short &&
+                account.landing_company_short !== 'svg' &&
+                account.landing_company_short !== 'bvi'
+                    ? account.landing_company_short?.charAt(0).toUpperCase() + account.landing_company_short?.slice(1)
+                    : account.landing_company_short?.toUpperCase();
+
+            const region =
+                account.market_type !== 'financial' && account.landing_company_short !== 'bvi'
+                    ? ` - ${this.getServerName(account)}`
+                    : '';
+
+            short_code_and_region = `${short_code}${region}`;
+        }
+        return short_code_and_region;
+    }
+    setCombinedCFDMT5Accounts() {
+        this.combined_cfd_mt5_accounts = [];
+        this.available_mt5_accounts?.forEach(account => {
+            const existing_accounts = this.getExistingAccounts(account.platform, account.market_type);
+            const has_existing_accounts = existing_accounts.length > 0;
+            if (has_existing_accounts) {
+                existing_accounts.forEach(existing_account => {
+                    this.combined_cfd_mt5_accounts = [
+                        ...this.combined_cfd_mt5_accounts,
+                        {
+                            ...existing_account,
+                            icon: account.icon,
+                            sub_title: account.name,
+                            name: `${formatMoney(existing_account.currency, existing_account.display_balance, true)} ${
+                                existing_account.currency
+                            }`,
+                            short_code_and_region: this.getShortCodeAndRegion(existing_account),
+                            platform: account.platform,
+                            description: existing_account.display_login,
+                            key: `trading_app_card_${existing_account.display_login}`,
+                            type: 'transfer_trade',
+                            availability: this.selected_region,
+                            market_type: account.market_type,
+                        },
+                    ];
+                });
+            } else {
+                this.combined_cfd_mt5_accounts = [
+                    ...this.combined_cfd_mt5_accounts,
+                    {
+                        icon: account.icon,
+                        name: account.name,
+                        platform: account.platform,
+                        description: account.description,
+                        key: `trading_app_card_${account.name}`,
+                        type: 'get',
+                        availability: this.selected_region,
+                        market_type: account.market_type,
+                    },
+                ];
+            }
+        });
     }
 }

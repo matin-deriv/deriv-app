@@ -8,6 +8,7 @@ import TradingAppCard from 'Components/containers/trading-app-card';
 import { useStores } from 'Stores/index';
 import { isMobile } from '@deriv/shared';
 import PlatformLoader from 'Components/pre-loader/platform-loader';
+import { getHasDivider } from 'Constants/utils';
 
 const OptionsAndMultipliersListing = () => {
     const { traders_hub, client, ui } = useStores();
@@ -102,7 +103,7 @@ const OptionsAndMultipliersListing = () => {
                         {...available_platform}
                         type={is_demo || has_any_real_account ? 'trade' : 'none'}
                         is_deriv_platform
-                        has_divider={!is_eu_user && (isMobile() ? index < 4 : index < 3)}
+                        has_divider={!is_eu_user && getHasDivider(index, available_platforms.length, 1, 3)}
                     />
                 ))
             ) : (
