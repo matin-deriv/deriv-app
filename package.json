@@ -100,7 +100,7 @@
         "prepare": "husky install"
     },
     "dependencies": {
-        "@babel/preset-typescript": "^7.16.5",
+        "@babel/preset-typescript": "^7.18.6",
         "@testing-library/jest-dom": "^5.12.0",
         "@types/react-transition-group": "^4.4.4",
         "babel-jest": "^27.3.1",
