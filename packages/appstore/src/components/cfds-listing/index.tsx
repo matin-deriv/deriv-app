@@ -34,13 +34,15 @@ const CFDsListing = () => {
         selected_region,
         has_any_real_account,
         startTrade,
-        is_eu_user,
         is_real,
         getExistingAccounts,
         getAccount,
         toggleAccountTypeModalVisibility,
         can_get_more_cfd_mt5_accounts,
         selected_account_type,
+        is_eu_user,
+        is_demo_low_risk,
+        no_MF_account,
     } = traders_hub;
 
     const { toggleCompareAccountsModal, setAccountType } = cfd;
@@ -48,7 +50,10 @@ const CFDsListing = () => {
     const { setAppstorePlatform } = common;
     const { openDerivRealAccountNeededModal } = ui;
     const has_no_real_account = !has_any_real_account;
-    const accounts_sub_text = is_eu_user ? localize('Account Information') : localize('Compare accounts');
+    const accounts_sub_text =
+        !is_eu_user || is_demo_low_risk ? localize('Compare accounts') : localize('Account Information');
+
+    const no_real_mf_account_eu_regulator = no_MF_account && is_eu_user && is_real;
     return (
         <ListingContainer
             title={
@@ -84,11 +89,12 @@ const CFDsListing = () => {
                 </div>
             )}
 
-            {is_real && has_no_real_account && (
-                <div className='cfd-full-row'>
-                    <AddOptionsAccount />
-                </div>
-            )}
+            {(is_real && has_no_real_account) ||
+                (is_eu_user && no_MF_account && is_real && (
+                    <div className='cfd-full-row'>
+                        <AddOptionsAccount />
+                    </div>
+                ))}
 
             <div className='cfd-full-row' style={{ paddingTop: '2rem' }}>
                 <Text size='xs' line_height='m' weight='bold'>
@@ -113,7 +119,7 @@ const CFDsListing = () => {
                                 has_divider={!is_eu_user && getHasDivider(index, list_size, 1, 3)}
                                 onAction={() => {
                                     if (existing_account.type === 'get') {
-                                        if (has_no_real_account && is_real) {
+                                        if ((has_no_real_account && is_real) || no_real_mf_account_eu_regulator) {
                                             openDerivRealAccountNeededModal();
                                         } else {
                                             setAccountType({

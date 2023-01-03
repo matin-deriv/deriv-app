@@ -55,6 +55,7 @@ export default class TradersHubStore extends BaseStore {
             handleTabItemClick: action.bound,
             has_any_real_account: computed,
             is_demo: computed,
+            is_demo_low_risk: computed,
             is_eu_selected: computed,
             is_real: computed,
             can_get_more_cfd_mt5_accounts: computed,
@@ -100,6 +101,7 @@ export default class TradersHubStore extends BaseStore {
                 this.root_store.client.is_eu,
                 this.root_store.client.mt5_login_list,
                 this.root_store.client.dxtrade_accounts_list,
+                this.is_demo_low_risk,
             ],
             () => {
                 this.getAvailablePlatforms();
@@ -148,20 +150,24 @@ export default class TradersHubStore extends BaseStore {
         this.is_tour_open = is_tour_open;
     }
 
+    get is_demo_low_risk() {
+        const { is_low_risk } = this.root_store.client;
+        return this.is_demo && is_low_risk;
+    }
+
     getAvailablePlatforms() {
         const appstore_platforms = getAppstorePlatforms();
-        if (this.is_eu_user) {
+        if (this.is_eu_user && !this.is_demo_low_risk) {
             this.available_platforms = appstore_platforms.filter(platform =>
                 ['EU', 'All'].some(region => region === platform.availability)
             );
             return;
-        } else if (this.selected_region === 'Non-EU') {
+        } else if (this.selected_region === 'Non-EU' || this.is_demo_low_risk) {
             this.available_platforms = appstore_platforms.filter(platform =>
                 ['Non-EU', 'All'].some(region => region === platform.availability)
             );
             return;
         }
-
         this.available_platforms = appstore_platforms;
     }
 
@@ -185,19 +191,21 @@ export default class TradersHubStore extends BaseStore {
     }
 
     getAvailableCFDAccounts() {
-        const account_desc = this.is_eu_user
-            ? localize(
-                  'Trade CFDs on forex, stocks, stock indices, synthetic indices, cryptocurrencies, and commodities with leverage.'
-              )
-            : localize('Trade CFDs on Deriv MT5 with forex, stocks & indices, commodities, and cryptocurrencies.');
+        const account_desc =
+            !this.is_eu_user || this.is_demo_low_risk
+                ? localize('Trade CFDs on MT5 with forex, stocks, stock indices, commodities, and cryptocurrencies.')
+                : localize(
+                      'Trade CFDs on forex, stocks, stock indices, synthetic indices, cryptocurrencies, and commodities with leverage.'
+                  );
+
         const all_available_accounts = [
             ...available_traders_hub_cfd_accounts,
             {
-                name: this.is_eu_user ? localize('CFDs') : localize('Financial'),
+                name: !this.is_eu_user || this.is_demo_low_risk ? localize('Financial') : localize('CFDs'),
                 description: account_desc,
                 platform: CFD_PLATFORMS.MT5,
                 market_type: 'financial',
-                icon: this.is_eu_user ? 'CFDs' : 'Financial',
+                icon: !this.is_eu_user || this.is_demo_low_risk ? 'Financial' : 'CFDs',
                 availability: 'All',
             },
         ];
@@ -213,7 +221,7 @@ export default class TradersHubStore extends BaseStore {
     }
 
     getAvailableMt5Accounts() {
-        if (this.is_eu_user) {
+        if (this.is_eu_user && !this.is_demo_low_risk) {
             this.available_mt5_accounts = this.available_cfd_accounts.filter(account =>
                 ['EU', 'All'].some(region => region === account.availability)
             );
@@ -226,7 +234,7 @@ export default class TradersHubStore extends BaseStore {
     }
 
     getAvailableDxtradeAccounts() {
-        if (this.is_eu_user) {
+        if (this.is_eu_user && !this.is_demo_low_risk) {
             this.available_dxtrade_accounts = this.available_cfd_accounts.filter(
                 account =>
                     ['EU', 'All'].some(region => region === account.availability) &&
