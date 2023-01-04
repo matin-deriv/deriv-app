@@ -20,9 +20,15 @@ const AccountTransferModal = ({ is_modal_open, toggleModal }: TAccountTransferMo
                 account_transfer: { is_transfer_confirm, should_switch_account },
             },
         },
+        traders_hub: { closeModal, openModal },
     } = useStore();
 
     const history = useHistory();
+
+    React.useEffect(() => {
+        return () => closeModal();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const modal_title = !is_transfer_confirm && <Localize i18n_default_text={'Transfer funds to your account'} />;
 
@@ -34,6 +40,11 @@ const AccountTransferModal = ({ is_modal_open, toggleModal }: TAccountTransferMo
     const onClickNotes = () => {
         setIsOpen(false);
         history.push(routes.cashier_acc_transfer);
+    };
+
+    const openAccountSwitcherModal = () => {
+        setIsOpen(false);
+        openModal('currency_selection');
     };
 
     return (
@@ -49,6 +60,7 @@ const AccountTransferModal = ({ is_modal_open, toggleModal }: TAccountTransferMo
         >
             <Modal.Body>
                 <AccountTransfer
+                    openAccountSwitcherModal={openAccountSwitcherModal}
                     onClickDeposit={onClickDeposit}
                     onClickNotes={onClickNotes}
                     onClose={() => setIsOpen(false)}
