@@ -107,7 +107,7 @@
         "dotenv": "^8.2.0",
         "react": "^16.14.0",
         "react-dom": "^16.14.0",
-        "typescript": "^4.6.3"
+        "typescript": "^4.9.5"
     },
     "optionalDependencies": {
         "fsevents": "^2.3.2"
