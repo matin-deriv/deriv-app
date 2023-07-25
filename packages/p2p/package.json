@@ -54,7 +54,7 @@
         "react-router-dom": "^5.2.0",
         "react-simple-star-rating": "4.0.4",
         "react-svg-loader": "^3.0.3",
-        "react-transition-group": "4.4.2",
+        "react-transition-group": "4.4.5",
         "sendbird": "~3.0.137"
     },
     "devDependencies": {
